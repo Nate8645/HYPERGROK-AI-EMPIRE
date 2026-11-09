@@ -1,6 +1,6 @@
 :root { color-scheme: dark; background: #07090d; color: #d7ecff; font-family: "Segoe UI", sans-serif; }
 body { margin: 0; }
-main { max-width: 980px; margin: 0 auto; padding: 12px; }
+main { max-width: 980px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)); }
 h1, h2, p { margin: 0 0 6px; }
 h1 { font-size: 1.4rem; letter-spacing: 0.08em; }
 .kicker { color: #3ec6ff; font-size: 0.75rem; letter-spacing: 0.2em; }

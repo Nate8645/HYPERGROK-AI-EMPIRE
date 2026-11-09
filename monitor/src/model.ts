@@ -67,6 +67,58 @@ export function formatZurich(value: string | null | undefined): string {
   }).format(date);
 }
 
+export type PublicTicker = {
+  product: string;
+  bid: string | null;
+  ask: string | null;
+  price: string | null;
+  time: string | null;
+};
+
+export async function loadPublicTicker(
+  fetchImpl: FetchLike,
+  product = "BTC-USD",
+): Promise<PublicTicker | null> {
+  try {
+    const response = await fetchImpl(`https://api.exchange.coinbase.com/products/${product}/ticker`);
+    if (!response.ok) {
+      return null;
+    }
+    const body = (await response.json()) as { bid?: string; ask?: string; price?: string; time?: string };
+    if (!body || body.price == null || body.price === "") {
+      return null;
+    }
+    return {
+      product,
+      bid: body.bid ?? null,
+      ask: body.ask ?? null,
+      price: String(body.price),
+      time: body.time ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function mapDesk(input: {
+  configured: boolean;
+  risk: { max_planned_risk_fraction?: string; live_trading_enabled?: boolean } | null;
+  journal: { outcome?: string; symbol?: string; summary?: string }[] | null;
+  coinbase: { live_armed?: boolean } | null;
+} | null): { ideas: string; risk: string; proposals: string } {
+  if (!input?.configured) {
+    return { ideas: "Keine Daten", risk: "Keine Daten", proposals: "Keine Daten" };
+  }
+  const ideas = (input.journal ?? []).slice(0, 3).map((row) => `${row.symbol ?? "-"} ${row.outcome ?? ""}`.trim());
+  return {
+    ideas: ideas.length ? ideas.join(" · ") : "Keine Daten",
+    risk: input.risk
+      ? `Limit ${input.risk.max_planned_risk_fraction ?? "Keine Daten"}; live ${input.risk.live_trading_enabled ? "an" : "aus"}`
+      : "Keine Daten",
+    proposals: input.coinbase ? `Coinbase live ${input.coinbase.live_armed ? "armed" : "nicht armed"}` : "Keine Daten",
+  };
+}
+
 export function backtestLines(summary: { available?: boolean; products?: Record<string, { start?: string; end?: string; test_expectancy?: Record<string, string>; overfit_warning?: Record<string, string | null> }> } | null): string[] {
   if (!summary?.available || !summary.products) {
     return ["Keine Daten"];

@@ -1,4 +1,4 @@
-import { backtestLines, checklistProgress, formatZurich, loadGithub, mapAgents, NETWORK_INTERVAL_MS } from "./model";
+import { backtestLines, checklistProgress, formatZurich, loadGithub, loadPublicTicker, mapAgents, mapDesk, NETWORK_INTERVAL_MS } from "./model";
 
 test("agents without telemetry stay offline and do not imply work", () => {
   const cards = mapAgents(null);
@@ -26,6 +26,13 @@ test("zurich timestamps and missing values", () => {
   expect(formatZurich(null)).toBe("Keine Daten");
   expect(formatZurich("not-a-date")).toBe("Keine Daten");
   expect(formatZurich("2026-11-09T18:00:00Z")).toContain("19:00:00");
+});
+
+test("public ticker and desk telemetry fail closed", async () => {
+  expect(await loadPublicTicker(async () => ({ ok: false, status: 500, json: async () => ({}) }))).toBeNull();
+  expect(await loadPublicTicker(async () => ({ ok: true, status: 200, json: async () => ({ price: "1", bid: "1", ask: "2", time: "2026-11-09T18:00:00Z" }) }))).toMatchObject({ price: "1" });
+  expect(mapDesk(null)).toEqual({ ideas: "Keine Daten", risk: "Keine Daten", proposals: "Keine Daten" });
+  expect(mapDesk({ configured: false, risk: null, journal: null, coinbase: null }).ideas).toBe("Keine Daten");
 });
 
 test("missing backtests stay Keine Daten", () => {

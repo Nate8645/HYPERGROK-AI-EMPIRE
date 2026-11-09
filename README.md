@@ -141,6 +141,28 @@ GitHub data uses the public REST API. The page re-reads its cache about every 90
 
 Timestamps use `Europe/Zurich`. Checklist progress is the count of items in `monitor/src/status.json`, not an estimated project percentage.
 
+### iPhone
+
+On the same Wi-Fi as the computer, run the backend with `--host 0.0.0.0` and `cd monitor && VITE_BACKEND_URL=http://<computer-lan-ip>:8000 npm run dev -- --host 0.0.0.0`. Open `http://<computer-lan-ip>:5173` on the phone. That address is not public HTTPS. The monitor does not show balances or keys. If `VITE_BACKEND_URL` is unset, ideas and risk stay `Keine Daten`. The Coinbase price card uses the public exchange ticker and shows `Keine Daten` when that request fails. Cursor status stays `Nicht verfügbar`.
+
+### GitHub Pages
+
+Pages is not enabled (`GET /repos/Nate8645/HYPERGROK-AI-EMPIRE/pages` returned 404 on 2026-11-09). To turn it on yourself, after this pull request is merged to `main`:
+
+1. Open the repository Settings, then Pages.
+2. Set the source to GitHub Actions.
+3. The workflow `.github/workflows/pages.yml` runs only on pushes to `main`. It builds `monitor/` with `VITE_BACKEND_URL` empty. Do not add a backend URL, a key, or an account balance to that workflow.
+
+This session cannot change those settings and cannot merge to `main`.
+
+### Free HTTPS for the backend
+
+The desk has no authentication. A public URL makes the kill switch and paper account reachable by anyone who has the URL.
+
+- Same-LAN HTTP, as above, needs no account and is not HTTPS.
+- Cloudflare Tunnel (`cloudflared`) can expose localhost over HTTPS. A named tunnel needs a free Cloudflare account. `cloudflared tunnel --url http://127.0.0.1:8000` gives a temporary URL and still requires installing their client.
+- ngrok and localtunnel also need an install. ngrok’s stable HTTPS address needs a free account. Treat all of these as untrusted until you add your own access control. Do not put the tunnel URL into the Pages build.
+
 ## Setup
 
 Python 3.11 or newer.

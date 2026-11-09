@@ -1,6 +1,6 @@
 # Development status
 
-Updated 2026-11-09 after Phase 3. Phases 4–6 are not started.
+Updated 2026-11-09 after Phase 4. Phases 5–6 are not started.
 
 ## Phase 1 — desk backend
 
@@ -46,9 +46,23 @@ Updated 2026-11-09 after Phase 3. Phases 4–6 are not started.
 - Real-money trading is blocked. The user has not given activation approval.
 - GitHub Pages is not enabled.
 
+## Phase 4 — HYPERGROK LIVE CONTROL
+
+- Status: implemented and tested as a static app. Deployable only after you merge to `main` and enable Pages. The hosted URL is blocked.
+- iPhone layout uses a single column under 700px and safe-area padding.
+- Seven agents, ideas, and risk render from the backend only when `VITE_BACKEND_URL` is set. Otherwise they show `Keine Daten` and do not animate.
+- Coinbase prices come from the public exchange ticker. A failed request shows `Keine Daten`.
+- GitHub commits, PR state, and Actions status use the public API with a four-minute cache.
+- Cursor status is `Nicht verfügbar`. No public unauthenticated status API was found.
+- Pages steps and free tunnel options are in the README. Cloudflare Tunnel, ngrok, and localtunnel need an install; named or stable HTTPS addresses need a free account. Same-LAN HTTP needs no account and is not HTTPS.
+
+### Tests actually run for this phase
+
+- `monitor` vitest: 9 passed. Production build succeeded.
+
 ### Next step
 
-Phase 4, the monitor finish and the exact Pages steps for the user. Resume from this file and from `monitor/src/App.tsx`.
+Phase 5, coverage and the local iPhone startup guide. Resume from this file.
 
 ### Resume point
 

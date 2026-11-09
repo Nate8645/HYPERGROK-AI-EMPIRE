@@ -10,7 +10,9 @@ import {
   checklistProgress,
   backtestLines,
   loadGithub,
+  loadPublicTicker,
   mapAgents,
+  mapDesk,
   formatZurich,
 } from "./model";
 
@@ -22,6 +24,8 @@ export function App() {
   const [agents, setAgents] = useState<AgentCard[]>(mapAgents(null));
   const [backendNote, setBackendNote] = useState(BACKEND ? "Backend wird gelesen." : "Backend nicht verbunden");
   const [feed, setFeed] = useState<{ id: string; text: string; at: string }[]>([]);
+  const [ticker, setTicker] = useState<string>("Keine Daten");
+  const [desk, setDesk] = useState(mapDesk(null));
 
   useEffect(() => {
     let cache: GithubSnapshot | null = null;
@@ -35,6 +39,11 @@ export function App() {
       setGithub(next);
     };
     void tick();
+    void loadPublicTicker(fetch).then((quote) => {
+      if (!stop) {
+        setTicker(quote ? `${quote.product} ${quote.price} (${formatZurich(quote.time)})` : "Keine Daten");
+      }
+    });
     const timer = window.setInterval(() => void tick(), UI_TICK_MS);
     return () => {
       stop = true;
@@ -60,6 +69,17 @@ export function App() {
         const body = (await response.json()) as { agents?: { key: string; status?: string; last_summary?: string | null; updated_at?: string | null }[] };
         setAgents(mapAgents(body.agents ?? []));
         setBackendNote("Backend verbunden");
+        const [riskRes, journalRes, coinbaseRes] = await Promise.all([
+          fetch(`${BACKEND}/api/risk/config`),
+          fetch(`${BACKEND}/api/journal`),
+          fetch(`${BACKEND}/api/coinbase/status`),
+        ]);
+        setDesk(mapDesk({
+          configured: true,
+          risk: riskRes.ok ? await riskRes.json() : null,
+          journal: journalRes.ok ? ((await journalRes.json()) as { entries?: { outcome?: string; symbol?: string; summary?: string }[] }).entries ?? [] : null,
+          coinbase: coinbaseRes.ok ? await coinbaseRes.json() : null,
+        }));
       } catch {
         setAgents(mapAgents(null));
         setBackendNote("Backend nicht verbunden");
@@ -124,6 +144,16 @@ export function App() {
         <article className="card">
           <h2>Backend</h2>
           <p>{backendNote}</p>
+        </article>
+        <article className="card">
+          <h2>Coinbase Markt</h2>
+          <p>{ticker}</p>
+        </article>
+        <article className="card">
+          <h2>Ideen und Risiko</h2>
+          <p>{desk.ideas}</p>
+          <p>{desk.risk}</p>
+          <p>{desk.proposals}</p>
         </article>
       </section>
       <section className="agents">
