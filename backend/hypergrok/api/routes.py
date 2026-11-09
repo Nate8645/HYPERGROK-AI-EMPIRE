@@ -101,6 +101,30 @@ def login(body: LoginBody, request: Request):
     return response
 
 
+@router.post("/api/auth/logout")
+def logout(request: Request):
+    from fastapi.responses import JSONResponse
+
+    token = request.cookies.get("hg_session")
+    header = request.headers.get("authorization", "")
+    if not token and header.lower().startswith("bearer "):
+        token = header[7:].strip()
+    if token:
+        request.app.state.sessions.drop(token)
+    request.app.state.store.append_audit(
+        actor="session",
+        role="none",
+        action="logout",
+        path="/api/auth/logout",
+        outcome="allowed",
+        detail="session_dropped",
+        now=utcnow(),
+    )
+    response = JSONResponse({"authenticated": False})
+    response.delete_cookie("hg_session", path="/")
+    return response
+
+
 @router.get("/api/auth/session")
 def session_status(request: Request) -> dict:
     token = request.cookies.get("hg_session")

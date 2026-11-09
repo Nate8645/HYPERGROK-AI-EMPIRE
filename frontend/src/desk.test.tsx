@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { AgentBoard, ApprovalCard, BalanceCard, FillsCard, LiveStatus, OrdersCard, PnlCard, SignalCard, UtilizationCard } from "./desk";
+import { ActivationCard, AgentBoard, ApprovalCard, BalanceCard, FillsCard, LiveStatus, OrdersCard, PnlCard, SignalCard, UtilizationCard } from "./desk";
 import { stripSecrets } from "./secrets";
 
 test("strips secret-like fields before render", () => {
@@ -93,4 +93,12 @@ test("missing private panels stay Keine Daten and approval does not invent a tok
   );
   expect(screen.getAllByText("Keine Daten").length).toBeGreaterThan(0);
   expect(screen.getByText(/Live flags stay off/)).toBeInTheDocument();
+});
+
+test("activation fields start empty and do not arm the desk", () => {
+  render(<ActivationCard />);
+  expect(screen.getByText(/does not arm the desk/)).toBeInTheDocument();
+  for (const field of ["max_loss_per_trade", "max_loss_per_day", "max_total_loss", "max_deployed_capital", "allowed_pairs", "expiry", "max_slippage_bps", "kill_switch_conditions"]) {
+    expect((screen.getByRole("textbox", { name: new RegExp(field.replaceAll("_", " "), "i") }) as HTMLInputElement).value).toBe("");
+  }
 });

@@ -211,6 +211,38 @@ export function UtilizationCard({ rows, backtest }: { rows: UtilizationVariant[]
   );
 }
 
+export function ActivationCard() {
+  return (
+    <section className="card">
+      <h2>Activation</h2>
+      <p>The three live flags stay off. Defaults are not filled in. Submitting this form does not arm the desk.</p>
+      <form onSubmit={(event) => event.preventDefault()}>
+        <label>Max loss per trade<input name="max_loss_per_trade" defaultValue="" /></label>
+        <label>Max loss per day<input name="max_loss_per_day" defaultValue="" /></label>
+        <label>Max total loss<input name="max_total_loss" defaultValue="" /></label>
+        <label>Max deployed capital<input name="max_deployed_capital" defaultValue="" /></label>
+        <label>Allowed pairs<input name="allowed_pairs" defaultValue="" /></label>
+        <label>Expiry<input name="expiry" defaultValue="" /></label>
+        <label>Max slippage bps<input name="max_slippage_bps" defaultValue="" /></label>
+        <label>Kill switch conditions<input name="kill_switch_conditions" defaultValue="" /></label>
+        <button type="submit">Review only</button>
+      </form>
+    </section>
+  );
+}
+
+export function SessionBar({ authenticated, onLogout }: { authenticated: boolean; onLogout: () => void }) {
+  if (!authenticated) {
+    return null;
+  }
+  return (
+    <section className="card">
+      <h2>Session</h2>
+      <button type="button" onClick={onLogout}>Log out</button>
+    </section>
+  );
+}
+
 export function ApprovalCard({ onApprove }: { onApprove: (clientOrderId: string) => Promise<string | null> }) {
   const [clientOrderId, setClientOrderId] = useState("");
   const [message, setMessage] = useState("Live flags stay off. A token does not send an order.");

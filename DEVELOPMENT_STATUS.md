@@ -1,6 +1,6 @@
 # Development status
 
-Updated 2026-11-09 after the full-capital simulation. The 1% loss rule is unchanged. Autonomous mode is unset. Live trading stays blocked.
+Updated 2026-11-09 after session auth, the 191ff29 audit fixes, logout, and the NO TRADE screen. The 1% overshoot REJECT is unchanged. The three live flags stay false.
 
 ## Phase 1 — desk backend
 
@@ -147,13 +147,29 @@ Updated 2026-11-09 after the full-capital simulation. The 1% loss rule is unchan
 
 - Full pytest: 88 passed, 1 Starlette warning.
 
+## Phase 7 — hardening
+
+- Status: tested locally. Not approved for real money. The binding checklist in `docs/ACTIVATION_SUMMARY.md` is still all MISSING.
+- Private routes require a session. Logout deletes that session on the server. Tests use `authed` and do not turn auth off.
+- Audit record: `docs/security/AUDIT-191ff29.md`. P1–P6 are fixed in tests. Residual risks are in that file.
+- Coinbase SDK 1.8.4 signatures used by the broker match the installed client. Leverage is not passed.
+- The public BTC-USD daily screen, with RSI, MACD, EMA, ATR, regime, and the saved book, is **NO TRADE**. VWAP is `Keine Daten` on that file because the saved daily bars have no volume. 100% sizing does not fit the 1% rule.
+- The desk UI hides balance, orders, journal, the kill switch, and the activation form until sign-in. The activation form starts empty and does not arm the desk.
+- `pip-audit -r requirements.txt`: no known vulnerabilities. `npm audit` in `frontend/` and `monitor/`: 6 findings each, all in the Vitest 2 dev tree. The offered fix is Vitest 5, a major upgrade. It was not applied. `npm audit --omit=dev` in `frontend/` was clean on the earlier run.
+
+### Tests actually run
+
+- pytest: 100 passed, 1 Starlette warning.
+- frontend vitest: 7 passed. Production build succeeded.
+- monitor vitest: 9 passed. Production build succeeded.
+
 ### Next step
 
-`docs/ACTIVATION_SUMMARY.md` is the binding checklist. Every prerequisite there is MISSING. The three live flags stay false. Do not merge from this workspace. Do not turn autonomous mode on from this workspace.
+Your review of pull request 1. Do not merge from this workspace. Do not turn the three live flags on.
 
 ### Resume point
 
-Branch `cursor/phase1-desk-backend-716c`, PR https://github.com/Nate8645/HYPERGROK-AI-EMPIRE/pull/1. Uncommitted working-tree edits add session auth and the audit tests; `test_audit_191ff29.py` passed 9 tests, and `test_api.py` then failed because those tests do not log in. Finish that auth work and get the full suite green before treating authentication as met.
+Branch `cursor/phase1-desk-backend-716c`, PR https://github.com/Nate8645/HYPERGROK-AI-EMPIRE/pull/1. Activation remains blocked. See `docs/ACTIVATION_SUMMARY.md`.
 
 ### Resume point
 

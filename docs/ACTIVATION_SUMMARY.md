@@ -29,18 +29,18 @@ Activation stays blocked until every row is MET and you then set the flags yours
 
 ## The 8 limits
 
-Confirmed by you: **no**.
+None of these rows is approved. A proposed value is not a confirmation.
 
-| Limit | Config now | Proposed only, not applied |
-| --- | --- | --- |
-| Max loss per trade | **UNSET** | 1% of equity. That is CHF 0.20 on the CHF 20 paper rule, or 0.10896768 USDC on the balance below. |
-| Max loss per day | **UNSET** | 3% of equity. |
-| Max total loss | **UNSET** | No written total exists. None is proposed. |
-| Max deployed capital | **UNSET** | The paper rule is CHF 20. The read balance is 10.896768 USDC. No FX conversion is applied, so the proposed cap is that USDC balance. |
-| Allowed pairs | **UNSET** | BTC-USDC, ETH-USDC, SOL-USDC. |
-| Expiry timestamp | **UNSET** | No expiry was written. None is proposed. |
-| Max slippage | **UNSET** | 10 bps per side, the desk assumption. Not a live slippage measurement. |
-| Kill-switch conditions | **UNSET** | `manual_halt`, `daily_loss`, `stale_data`, `feed_outage`. |
+| Limit | Status | Technical evidence | Missing steps | Required user approval |
+| --- | --- | --- | --- | --- |
+| Max loss per trade | **UNSET** | The risk engine default is 1% of equity (`max_planned_risk_fraction`). On 10.896768 USDC that is 0.10896768 USDC. The 100% simulation was REJECT. | You type the number in the protected activation form. The server does not copy the default in. | Confirm 1%, or write a different fraction. |
+| Max loss per day | **UNSET** | The risk engine default is 3% of start-of-day equity. It is not stored as an autonomous field. | You type the daily limit. | Confirm 3%, or write a different fraction. |
+| Max total loss | **UNSET** | No total-loss field is set. No written total exists in the desk brief. | You choose a number. None is proposed. | Write the total-loss cap yourself. |
+| Max deployed capital | **UNSET** | `coinbase_max_capital` is 0. `autonomous_max_deployed_capital` is empty. Paper starting capital is CHF 20. The read balance is 10.896768 USDC. No FX rate was applied. | You set the cap in the form and in the environment. | Confirm whether the cap is CHF 20 or 10.896768 USDC. |
+| Allowed pairs | **UNSET** | `COINBASE_PRODUCT_ALLOWLIST` is empty. `autonomous_allowed_pairs` is empty. | You list the pairs. | Confirm BTC-USDC, ETH-USDC, and SOL-USDC, or name others. |
+| Expiry timestamp | **UNSET** | `autonomous_expires_at` is empty. A past mandate already fails login in `test_p1_expired_mandate_rejects_login`. | You choose a future timestamp. | Write the expiry. No date is proposed. |
+| Max slippage | **UNSET** | The desk assumption is 10 bps per side. That is not an autonomous setting and not a live measurement. | You type the bps cap. | Confirm 10 bps per side, or write another cap. |
+| Kill-switch conditions | **UNSET** | The kill switch blocks new orders when engaged. Suggested ids are `manual_halt`, `daily_loss`, `stale_data`, `feed_outage`. They are not stored. | You enter the condition list. | Confirm that list, or replace it. |
 
 ## Account facts read on 2026-11-09
 

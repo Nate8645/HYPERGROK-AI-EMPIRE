@@ -97,6 +97,19 @@ def pytest_websocket_denied(client: TestClient):
     return _inner()
 
 
+def test_logout_drops_the_server_session() -> None:
+    app = _secured()
+    with TestClient(app) as client:
+        _login(client, "operator", OPERATOR_PASSWORD)
+        token = client.cookies.get("hg_session")
+        assert token
+        assert client.get("/api/risk/account").status_code == 200
+        assert client.post("/api/auth/logout").status_code == 200
+        assert app.state.sessions.get(token, NOW) is None
+        client.cookies.set("hg_session", token)
+        assert client.get("/api/risk/account").status_code == 401
+
+
 def test_p1_expired_mandate_rejects_login() -> None:
     app = _secured(auth_mandate_expires_at=NOW - timedelta(minutes=1))
     with TestClient(app) as client:

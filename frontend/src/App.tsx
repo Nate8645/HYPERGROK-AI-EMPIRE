@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
-import { AgentBoard, ApprovalCard, BalanceCard, FeeCard, FillsCard, JournalCard, KillSwitch, LiveStatus, OrdersCard, PnlCard, PreviewCard, PriceCard, RiskCard, SignalCard, TickerBoard, UtilizationCard } from "./desk";
+import { useEffect, useState, type FormEvent } from "react";
+import { ActivationCard, AgentBoard, ApprovalCard, BalanceCard, FeeCard, FillsCard, JournalCard, KillSwitch, LiveStatus, OrdersCard, PnlCard, PreviewCard, PriceCard, RiskCard, SessionBar, SignalCard, TickerBoard, UtilizationCard } from "./desk";
 import { stripSecrets } from "./secrets";
 import type { AgentStatus, Balance, CoinbaseStatus, DeskFill, DeskOrder, JournalEntry, Portfolio, RiskConfig, Ticker, UtilizationVariant } from "./types";
 
 async function readJson<T>(path: string): Promise<T | null> {
-  const response = await fetch(path);
+  const response = await fetch(path, { credentials: "include" });
   if (!response.ok) {
     return null;
   }
@@ -30,8 +30,14 @@ export function App() {
   const [fills, setFills] = useState<DeskFill[] | null>(null);
   const [utilization, setUtilization] = useState<UtilizationVariant[] | null>(null);
   const [backtest, setBacktest] = useState("Keine Daten");
+  const [authenticated, setAuthenticated] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
 
   useEffect(() => {
+    if (!authenticated) {
+      return;
+    }
     void readJson<{ agents: AgentStatus[] }>("/api/agents/status").then((body) => setAgents(body?.agents ?? []));
     void readJson<CoinbaseStatus>("/api/coinbase/status").then((body) => setCoinbase(body));
     void readJson<RiskConfig>("/api/risk/config").then((body) => setRisk(body));
@@ -80,10 +86,31 @@ export function App() {
       }
     };
     return () => socket.close();
-  }, []);
+  }, [authenticated]);
 
   const buySignal = journal.find((entry) => /buy/i.test(entry.summary))?.summary ?? "Keine Daten";
   const sellSignal = journal.find((entry) => /sell/i.test(entry.summary))?.summary ?? "Keine Daten";
+
+  async function signIn(event: FormEvent) {
+    event.preventDefault();
+    const response = await fetch("/api/auth/login", {
+      method: "POST",
+      credentials: "include",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ username, password }),
+    });
+    setAuthenticated(response.ok);
+    setPassword("");
+  }
+
+  async function signOut() {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    setAuthenticated(false);
+    setBalance(null);
+    setJournal([]);
+    setOrders(null);
+    setFills(null);
+  }
 
   async function approve(clientOrderId: string) {
     const response = await fetch("/api/approvals", {
@@ -117,10 +144,23 @@ export function App() {
         <p>Spot desk. Rule-based agents. No secrets on this screen. Live flags stay off.</p>
       </header>
       <div className="grid">
+        {authenticated ? <SessionBar authenticated onLogout={() => void signOut()} /> : (
+          <section className="card">
+            <h2>Sign in</h2>
+            <p>Private balance, orders, journal, and the kill switch stay behind this session.</p>
+            <form onSubmit={(event) => void signIn(event)}>
+              <label>Username<input value={username} onChange={(event) => setUsername(event.target.value)} /></label>
+              <label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
+              <button type="submit">Sign in</button>
+            </form>
+          </section>
+        )}
+        <TickerBoard tickers={tickers} />
+        {authenticated && (
+          <>
         <LiveStatus status={coinbase} />
         <KillSwitch engaged={engaged} onToggle={(next) => void toggleKill(next)} />
         <PriceCard bid={bid} ask={ask} source={source} />
-        <TickerBoard tickers={tickers} />
         <BalanceCard state={balanceState} balance={balance} />
         <PnlCard portfolio={portfolio} />
         <FeeCard text={fees} />
@@ -133,6 +173,9 @@ export function App() {
         <JournalCard entries={journal} />
         <PreviewCard message={preview} />
         <ApprovalCard onApprove={approve} />
+        <ActivationCard />
+          </>
+        )}
       </div>
     </main>
   );
