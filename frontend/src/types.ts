@@ -49,3 +49,21 @@ export type RiskConfig = {
   max_new_entries_per_day: number;
   live_trading_enabled: boolean;
 };
+
+export type Ticker = { product_id: string; price?: string | null; detail?: string; bid?: string | null; ask?: string | null };
+
+export type UtilizationVariant = {
+  fraction: string;
+  notional: string;
+  fee: string;
+  slippage: string;
+  remaining_balance: string;
+  min_size_ok: boolean;
+  stop_loss: string;
+  worst_case_loss: string;
+  risk_allowed: boolean;
+  backtest: string;
+};
+
+export type DeskOrder = { order_id?: string; product_id?: string; side?: string; status?: string; client_order_id?: string };
+export type DeskFill = { product_id?: string; side?: string; size?: string; price?: string; commission?: string };

@@ -161,6 +161,52 @@ def place(body: OrderBody, request: Request):
         return _failure(exc)
 
 
+@router.get("/utilization")
+def utilization(
+    request: Request,
+    product_id: str = Query(...),
+    side: str = Query("buy"),
+    stop_fraction: str = Query("0.01"),
+    post_only: bool = Query(False),
+):
+    try:
+        return _public(
+            request.app.state.coinbase.capital_utilization(
+                product_id=product_id,
+                side=side,
+                stop_fraction=Decimal(stop_fraction),
+                post_only=post_only,
+            )
+        )
+    except CoinbaseFailure as exc:
+        return _failure(exc)
+
+
+@router.get("/public-tickers")
+def public_tickers(request: Request, products: str = Query("BTC-USDC,ETH-USDC,SOL-USDC")):
+    ids = [item.strip().upper() for item in products.split(",") if item.strip()]
+    return _public(request.app.state.coinbase.public_tickers(ids))
+
+
+@router.get("/orders/open")
+def open_orders(request: Request):
+    try:
+        return _public({"orders": request.app.state.coinbase.broker.open_orders()})
+    except CoinbaseFailure as exc:
+        return _failure(exc)
+
+
+@router.get("/orders/by-client/{client_order_id}")
+def order_by_client(client_order_id: str, request: Request):
+    try:
+        found = request.app.state.coinbase.broker.reconcile(client_order_id)
+    except CoinbaseFailure as exc:
+        return _failure(exc)
+    if found is None:
+        return JSONResponse(status_code=404, content={"error": {"code": "order_not_found", "message": "no order for that client_order_id"}})
+    return _public(found)
+
+
 @router.get("/orders")
 def orders(request: Request):
     try:

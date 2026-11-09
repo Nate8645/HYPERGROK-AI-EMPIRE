@@ -1,6 +1,6 @@
 # Development status
 
-Updated 2026-11-09 after Phase 6. No later phase is in scope.
+Updated 2026-11-09 after the full-capital simulation. The 1% loss rule is unchanged. Autonomous mode is unset. Live trading stays blocked.
 
 ## Phase 1 — desk backend
 
@@ -105,9 +105,51 @@ Updated 2026-11-09 after Phase 6. No later phase is in scope.
 - The API has no authentication.
 - GitHub Pages is not enabled. The workflow deploys only from `main`.
 
+## Coinbase BUY/SELL extension
+
+- Status: implemented and tested with mocks. Live submit is blocked. A public dashboard is blocked.
+- Read-only account facts from 2026-11-09 21:37 Europe/Zurich are a fixture, not a live default. See `docs/COINBASE_READINESS.md`.
+- Market and limit buy/sell, preview, `get_order` confirmation, fills, and fee-inclusive P&L stay on the existing adapter.
+- `GET /api/coinbase/utilization` sizes 10/25/50/75/100% of the quote balance returned by the API. Without a configured client it returns `Keine Daten`.
+- `POST /api/desk/team` runs all seven agents and, when a client exists, a preview. It does not submit while the live flags are off.
+- The local desk in `frontend/` shows cash, portfolio, prices, signals, fees, P&L, risk, utilization, open orders, fills, and a per-order approval form. `monitor/` still has none of the private account data.
+
+### Tests actually run for this extension
+
+- Full pytest: 81 passed, 1 Starlette warning.
+- New file: `backend/tests/test_spot_cases.py`.
+
+### Open bugs
+
+- Node 20 deprecation annotations on GitHub Actions. The jobs use Node 20. This does not fail the suite.
+- Vitest 2.1.9 dev dependencies report 6 npm audit findings. Production `npm audit --omit=dev` in `frontend/` is clean. The fix is a major upgrade to Vitest 5.1.0, which was not applied.
+
+### Blockers for a live desk
+
+- You have not enabled a View+Trade CDP key outside the repo.
+- You have not set the live flags, a product allowlist, or a capital cap, and you should not until you intend to send real spot orders.
+- The key-permission check refuses a transfer-capable key only after it is invoked. It was not called against Coinbase.
+- The API has no authentication.
+- GitHub Pages is not enabled. The workflow deploys only from `main`.
+- The read showed USDC only. There is no crypto position to sell.
+- No USDC-pair backtest exists. The utilization panel says `Keine Daten` for those products.
+
+## Full-capital simulation and activation fields
+
+- Status: implemented and tested. Not an order permission. Deployable for live trading: blocked.
+- `full_capital_size` reserves the entry fee and the exit fee, then rounds down to 0.01. On 10.896768 USDC at a 0.001 taker rate both sides, the size is 10.87.
+- The Risk Manager simulation rejected that size. Daily gaps in the BTC-USD sample would break the 1% budget in 71.3% of sessions. One-minute noise was smaller than the required 0.6024% stop, so that particular reject reason did not fire. Details are in `docs/COINBASE_READINESS.md`.
+- Autonomous arming stays locked. Every required field is UNSET. Proposed values are only in `docs/ACTIVATION_SUMMARY.md`.
+- Exits preview a stop-limit or market sell and store an approval. They do not submit. A feed outage, stale book, or engaged kill switch produces no preview.
+- `run_final_preview_case` runs market, research, strategist, desk lead, risk, execution, and review with live submission forced off. The live preview is `Keine Daten`.
+
+### Tests actually run
+
+- Full pytest: 88 passed, 1 Starlette warning.
+
 ### Next step
 
-Your review of pull request 1. Resume from this file, branch `cursor/phase1-desk-backend-716c`. Do not merge from this workspace.
+Your review of pull request 1. Resume from this file, `docs/COINBASE_READINESS.md`, and `docs/ACTIVATION_SUMMARY.md`. Do not merge from this workspace. Do not turn autonomous mode on from this workspace.
 
 ### Resume point
 

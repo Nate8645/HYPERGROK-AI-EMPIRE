@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { AgentBoard, BalanceCard, LiveStatus, PnlCard } from "./desk";
+import { AgentBoard, ApprovalCard, BalanceCard, FillsCard, LiveStatus, OrdersCard, PnlCard, SignalCard, UtilizationCard } from "./desk";
 import { stripSecrets } from "./secrets";
 
 test("strips secret-like fields before render", () => {
@@ -79,4 +79,18 @@ test("pnl card shows realized, unrealized, and a missing mark", () => {
   expect(screen.getByText(/Realized 0/)).toBeInTheDocument();
   expect(screen.getAllByText(/mark unavailable/).length).toBeGreaterThan(0);
   expect(screen.getByText(/BTC-USD/)).toBeInTheDocument();
+});
+
+test("missing private panels stay Keine Daten and approval does not invent a token", () => {
+  render(
+    <>
+      <SignalCard buy="Keine Daten" sell="Keine Daten" />
+      <OrdersCard orders={null} />
+      <FillsCard fills={null} />
+      <UtilizationCard rows={null} backtest="Keine Daten" />
+      <ApprovalCard onApprove={async () => null} />
+    </>,
+  );
+  expect(screen.getAllByText("Keine Daten").length).toBeGreaterThan(0);
+  expect(screen.getByText(/Live flags stay off/)).toBeInTheDocument();
 });

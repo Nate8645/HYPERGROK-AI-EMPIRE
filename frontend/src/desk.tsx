@@ -1,4 +1,5 @@
-import type { AgentStatus, Balance, CoinbaseStatus, JournalEntry, Portfolio, RiskConfig } from "./types";
+import { useState } from "react";
+import type { AgentStatus, Balance, CoinbaseStatus, DeskFill, DeskOrder, JournalEntry, Portfolio, RiskConfig, Ticker, UtilizationVariant } from "./types";
 
 export function LiveStatus({ status }: { status: CoinbaseStatus | null }) {
   if (!status) {
@@ -136,6 +137,101 @@ export function PreviewCard({ message }: { message: string }) {
     <section className="card">
       <h2>Order preview</h2>
       <p>{message}</p>
+    </section>
+  );
+}
+
+export function TickerBoard({ tickers }: { tickers: Ticker[] }) {
+  return (
+    <section className="card">
+      <h2>Live prices</h2>
+      {tickers.length === 0 ? <p>Keine Daten</p> : tickers.map((ticker) => (
+        <p key={ticker.product_id}>{ticker.product_id} {ticker.price ?? ticker.detail ?? "Keine Daten"}</p>
+      ))}
+    </section>
+  );
+}
+
+export function SignalCard({ buy, sell }: { buy: string; sell: string }) {
+  return (
+    <section className="card">
+      <h2>Buy and sell signals</h2>
+      <p>Buy {buy}</p>
+      <p>Sell {sell}</p>
+    </section>
+  );
+}
+
+export function FeeCard({ text }: { text: string }) {
+  return (
+    <section className="card">
+      <h2>Fees</h2>
+      <p>{text}</p>
+    </section>
+  );
+}
+
+export function OrdersCard({ orders }: { orders: DeskOrder[] | null }) {
+  return (
+    <section className="card">
+      <h2>Open orders</h2>
+      {orders === null ? <p>Keine Daten</p> : orders.length === 0 ? <p>No open orders.</p> : (
+        <ul>{orders.map((order) => <li key={order.order_id ?? order.client_order_id}>{order.product_id} {order.side} {order.status}</li>)}</ul>
+      )}
+    </section>
+  );
+}
+
+export function FillsCard({ fills }: { fills: DeskFill[] | null }) {
+  return (
+    <section className="card">
+      <h2>Trade history</h2>
+      {fills === null ? <p>Keine Daten</p> : fills.length === 0 ? <p>No fills.</p> : (
+        <ul>{fills.map((fill, index) => <li key={`${fill.product_id}-${index}`}>{fill.product_id} {fill.side} {fill.size} @ {fill.price} fee {fill.commission ?? "0"}</li>)}</ul>
+      )}
+    </section>
+  );
+}
+
+export function UtilizationCard({ rows, backtest }: { rows: UtilizationVariant[] | null; backtest: string }) {
+  return (
+    <section className="card">
+      <h2>Capital utilization</h2>
+      <p>Backtest {backtest}</p>
+      {rows === null ? <p>Keine Daten</p> : (
+        <ul>
+          {rows.map((row) => (
+            <li key={row.fraction}>
+              {row.fraction} notional {row.notional} fee {row.fee} slippage {row.slippage} remaining {row.remaining_balance} stop {row.stop_loss} worst {row.worst_case_loss} {row.risk_allowed ? "risk ok" : "risk blocked"}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+export function ApprovalCard({ onApprove }: { onApprove: (clientOrderId: string) => Promise<string | null> }) {
+  const [clientOrderId, setClientOrderId] = useState("");
+  const [message, setMessage] = useState("Live flags stay off. A token does not send an order.");
+  return (
+    <section className="card">
+      <h2>Per-order approval</h2>
+      <p>{message}</p>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void onApprove(clientOrderId).then((token) => {
+            setMessage(token ? `Token stored for ${clientOrderId}. Submit stays blocked while live flags are off.` : "Approval was not stored.");
+          });
+        }}
+      >
+        <label>
+          Client order id
+          <input value={clientOrderId} onChange={(event) => setClientOrderId(event.target.value)} />
+        </label>
+        <button type="submit">Store approval</button>
+      </form>
     </section>
   );
 }

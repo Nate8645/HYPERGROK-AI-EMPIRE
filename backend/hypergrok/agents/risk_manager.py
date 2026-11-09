@@ -28,3 +28,13 @@ class RiskManager:
         if decision.status == "PASS" and decision.engine == "risk_engine":
             _PASSED.set(frozenset(set(_PASSED.get()) | {order.client_order_id}))
         return decision
+
+    def review_full_capital(self, **kwargs) -> dict:
+        """Simulation only. A REJECT or PASS here is not recorded as permission to send."""
+        from hypergrok.risk.full_capital import assess_full_capital
+
+        ceiling = self.service.engine.settings.simulation_max_capital_fraction
+        fraction = min(kwargs.pop("capital_fraction", ceiling), ceiling)
+        result = assess_full_capital(capital_fraction=fraction, **kwargs)
+        result["pass_recorded"] = False
+        return result

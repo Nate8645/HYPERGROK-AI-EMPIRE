@@ -103,6 +103,48 @@ class Settings(BaseSettings):
         default=300.0,
         validation_alias=AliasChoices("HYPERGROK_MAX_FX_AGE_SECONDS"),
     )
+    autonomous_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_ENABLED", "AUTONOMOUS_ENABLED"),
+    )
+    autonomous_max_loss_per_trade: Decimal | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_MAX_LOSS_PER_TRADE"),
+    )
+    autonomous_max_loss_per_day: Decimal | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_MAX_LOSS_PER_DAY"),
+    )
+    autonomous_max_loss_total: Decimal | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_MAX_LOSS_TOTAL"),
+    )
+    autonomous_expires_at: datetime | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_EXPIRES_AT"),
+    )
+    autonomous_max_deployed_capital: Decimal | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_MAX_DEPLOYED_CAPITAL"),
+    )
+    autonomous_allowed_pairs: str = Field(
+        default="",
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_ALLOWED_PAIRS"),
+    )
+    autonomous_max_slippage_bps: Decimal | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_MAX_SLIPPAGE_BPS"),
+    )
+    autonomous_kill_switch_conditions: str = Field(
+        default="",
+        validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_KILL_SWITCH_CONDITIONS"),
+    )
+    # Ceiling for the capital simulation only. It does not replace the 1% loss rule,
+    # and the execution gate does not read it.
+    simulation_max_capital_fraction: Decimal = Field(
+        default=Decimal("1"),
+        validation_alias=AliasChoices("HYPERGROK_SIMULATION_MAX_CAPITAL_FRACTION"),
+    )
 
     def coinbase_products(self) -> frozenset[str]:
         return frozenset(
@@ -141,6 +183,8 @@ class Settings(BaseSettings):
             raise ValueError("max_fx_age_seconds must be positive")
         if self.coinbase_max_capital < 0:
             raise ValueError("coinbase_max_capital cannot be negative")
+        if not (Decimal("0") < self.simulation_max_capital_fraction <= Decimal("1")):
+            raise ValueError("simulation_max_capital_fraction must be in (0, 1]")
         if self.coinbase_max_capital_currency:
             self.coinbase_max_capital_currency = self.coinbase_max_capital_currency.strip().upper()
         self.account_currency = self.account_currency.strip().upper()

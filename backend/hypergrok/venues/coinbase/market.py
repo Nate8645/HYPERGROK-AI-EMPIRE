@@ -236,6 +236,23 @@ def snapshot_from_book(payload: object, *, symbol: str, fetched_at: datetime) ->
     )
 
 
+def parse_book_levels(payload: object) -> dict:
+    data = as_dict(payload)
+    book = data.get("pricebook") or data
+    books = data.get("pricebooks")
+    if isinstance(books, list) and books:
+        book = as_dict(books[0]) if not isinstance(books[0], dict) else books[0]
+    elif isinstance(book, dict) and "bids" not in book and isinstance(book.get("pricebook"), dict):
+        book = book["pricebook"]
+    book = as_dict(book) if not isinstance(book, dict) else book
+    return {
+        "product_id": book.get("product_id") or data.get("product_id"),
+        "time": book.get("time") or data.get("time"),
+        "bids": _levels(book.get("bids")),
+        "asks": _levels(book.get("asks")),
+    }
+
+
 def parse_best_bid_ask(payload: object, *, fetched_at: datetime) -> list[dict]:
     data = as_dict(payload)
     rows = data.get("pricebooks") or data.get("pricebook") or []

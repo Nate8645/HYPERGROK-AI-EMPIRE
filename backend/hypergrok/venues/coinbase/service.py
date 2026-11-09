@@ -26,6 +26,7 @@ from hypergrok.venues.coinbase.market import (
     parse_best_bid_ask,
     parse_candles,
     parse_portfolios,
+    parse_book_levels,
     parse_product,
     prepare_order_sizes,
     public_fill,
@@ -34,6 +35,7 @@ from hypergrok.venues.coinbase.market import (
 )
 from hypergrok.venues.coinbase.permissions import assess_key_permissions
 from hypergrok.venues.coinbase.pnl import compute_portfolio
+from hypergrok.venues.coinbase.utilization import backtest_for_product, funded_quote_currency, utilization_variants
 from hypergrok.venues.coinbase.sdk import SDK_VERSION, build_rest_client
 from hypergrok.domain import OrderIntent
 
@@ -248,17 +250,19 @@ class CoinbaseService:
         decision = RiskManager(self.risk_service).run(intent, now=moment, case_id=uuid.uuid4().hex)
         if decision.status != "PASS":
             self._journal("risk_rejected", decision.summary, {"reasons": decision.reasons}, symbol=intent.symbol)
-            return {"status": "rejected", "reason": "risk_rejected", "decision": decision.model_dump(mode="json"), "transmitted": False}
-        if self.configured() and str(prepared.get("side")) == "buy":
-            held = self.balances()
-            quote_ccy = (product or {}).get("quote_currency")
-            available = Decimal("0")
-            for row in held["accounts"]:
-                if quote_ccy is None or row.get("currency") == quote_ccy:
-                    available += Decimal(str(row.get("available") or "0"))
-            if available <= 0:
-                self._journal("empty_account", "no available quote balance", held, symbol=intent.symbol)
-                return {"status": "rejected", "reason": "empty_account", "transmitted": False, "decision": decision.model_dump(mode="json")}
+            return {"status": "rejected", "reason": "risk_rejected", "decision": decision.model_dump(mode="json"), "transmitted": False, "stages": ["risk_manager"]}
+        balance_block = self._balance_block(prepared, product)
+        if balance_block is not None:
+            self._journal(balance_block, balance_block, {"product_id": intent.symbol}, symbol=intent.symbol)
+            return {"status": "rejected", "reason": balance_block, "decision": decision.model_dump(mode="json"), "transmitted": False, "stages": ["risk_manager", "balance"]}
+        preview = None
+        if self.configured():
+            try:
+                preview = self.broker.preview(prepared)
+            except CoinbaseFailure as exc:
+                self._journal("preview_rejected", exc.message, {"code": exc.code}, symbol=intent.symbol)
+                raise
+            self._journal("preview", f"preview {intent.symbol}", preview, symbol=intent.symbol)
         fx = self.fx_quote()
         gate = self.gate.authorize(
             mode="live" if order.get("request_live") else "dry_run",
@@ -272,11 +276,25 @@ class CoinbaseService:
         )
         if not gate.allowed:
             self._journal("execution_rejected", gate.reason, {"reason": gate.reason}, symbol=intent.symbol)
-            return {"status": "rejected", "reason": gate.reason, "decision": decision.model_dump(mode="json"), "transmitted": False}
+            return {
+                "status": "rejected",
+                "reason": gate.reason,
+                "decision": decision.model_dump(mode="json"),
+                "transmitted": False,
+                "preview": preview,
+                "stages": ["risk_manager", "preview", "approval"],
+            }
         if gate.reason != "coinbase_live":
             recorded = self.dry_run.execute({"venue": "coinbase", **prepared, "notional": format(intent.notional, "f")})
             self._journal("dry_run_recorded", "dry run only", recorded.payload, symbol=intent.symbol)
-            return {"status": "recorded", "transmitted": False, "payload": recorded.payload, "decision": decision.model_dump(mode="json")}
+            return {
+                "status": "recorded",
+                "transmitted": False,
+                "payload": recorded.payload,
+                "decision": decision.model_dump(mode="json"),
+                "preview": preview,
+                "stages": ["risk_manager", "preview", "journal"],
+            }
         permissions = self.check_key_permissions()
         if not permissions["arming_allowed"]:
             self._journal("key_permission_blocked", permissions["reason"], permissions, symbol=intent.symbol)
@@ -285,13 +303,8 @@ class CoinbaseService:
                 "reason": permissions["reason"],
                 "decision": decision.model_dump(mode="json"),
                 "transmitted": False,
+                "preview": preview,
             }
-        try:
-            preview = self.broker.preview(prepared)
-        except CoinbaseFailure as exc:
-            self._journal("preview_rejected", exc.message, {"code": exc.code}, symbol=intent.symbol)
-            raise
-        self._journal("preview", f"preview {intent.symbol}", preview, symbol=intent.symbol)
         if self.store is not None and order.get("approval_token"):
             self.store.mark_approval_used(order["approval_token"], moment)
         result = self.broker.submit(prepared)
@@ -304,7 +317,111 @@ class CoinbaseService:
         )
         for fill in result.get("fills") or []:
             self._journal("fill", f"fill {fill.get('trade_id') or fill.get('entry_id')}", fill, symbol=intent.symbol)
-        return {"status": result.get("status"), "transmitted": transmitted, "result": result, "decision": decision.model_dump(mode="json")}
+        if result.get("confirmation"):
+            self._journal("order_confirmed", f"confirmed {intent.client_order_id}", result["confirmation"], symbol=intent.symbol)
+        return {
+            "status": result.get("status"),
+            "transmitted": transmitted,
+            "result": result,
+            "decision": decision.model_dump(mode="json"),
+            "preview": preview,
+            "stages": ["market_data", "risk_manager", "preview", "approval", "submit", "confirm", "journal"],
+        }
+
+    def _available(self, currency: str | None) -> Decimal:
+        held = self.balances()
+        total = Decimal("0")
+        for row in held["accounts"]:
+            if currency is None or row.get("currency") == currency:
+                total += Decimal(str(row.get("available") or "0"))
+        return total
+
+    def _balance_block(self, prepared: dict, product: dict | None) -> str | None:
+        if not self.configured() or product is None:
+            return None
+        side = str(prepared.get("side") or "")
+        if side == "buy":
+            available = self._available(product.get("quote_currency"))
+            need = Decimal(str(prepared.get("quote_size") or "0"))
+            if need <= 0 and prepared.get("base_size") and (prepared.get("limit_price") or prepared.get("entry_price")):
+                price = Decimal(str(prepared.get("limit_price") or prepared.get("entry_price")))
+                need = Decimal(str(prepared["base_size"])) * price
+            if available <= 0:
+                return "empty_account"
+            if need > available:
+                return "insufficient_balance"
+            return None
+        if side == "sell":
+            available = self._available(product.get("base_currency"))
+            need = Decimal(str(prepared.get("base_size") or "0"))
+            if available <= 0:
+                return "no_position"
+            if need > available:
+                return "sell_exceeds_holdings"
+        return None
+
+    def book_levels(self, product_id: str) -> dict:
+        raw = self._call(lambda client: client.get_product_book(product_id))
+        return parse_book_levels(raw)
+
+    def capital_utilization(self, *, product_id: str, side: str, stop_fraction: Decimal, post_only: bool = False) -> dict:
+        if not self.configured():
+            return {"available": False, "reason": "coinbase_not_configured", "backtest": "Keine Daten", "variants": []}
+        balances = self.balances()
+        quote = funded_quote_currency(balances["accounts"])
+        product = self.get_product(product_id)
+        if quote is None or product.get("quote_currency") != quote:
+            return {
+                "available": False,
+                "reason": "quote_not_funded",
+                "quote_currency": quote,
+                "backtest": "Keine Daten",
+                "variants": [],
+            }
+        tradable = self._available(quote)
+        fees = self.fees()
+        book = self.book_levels(product_id)
+        summary = self._saved_backtests()
+        report = utilization_variants(
+            tradable=tradable,
+            quote_currency=quote,
+            taker_fee_rate=Decimal(fees["taker_fee_rate"]),
+            maker_fee_rate=Decimal(fees["maker_fee_rate"]),
+            quote_increment=Decimal(str(product["quote_increment"])),
+            quote_min_size=Decimal(str(product["quote_min_size"])),
+            stop_fraction=stop_fraction,
+            equity=tradable,
+            max_risk_fraction=self.settings.max_planned_risk_fraction,
+            bids=book.get("bids") or [],
+            asks=book.get("asks") or [],
+            side=side,
+            post_only=post_only,
+            backtest=backtest_for_product(summary, product_id),
+            fee_floor_rate=self.settings.default_fee_bps_round_trip / Decimal("10000"),
+            slippage_floor_rate=self.settings.default_slippage_bps_round_trip / Decimal("10000"),
+        )
+        report["available"] = True
+        report["source"] = SOURCE
+        report["fetched_at"] = self.clock().isoformat()
+        report["product_id"] = product_id
+        report["book_time"] = book.get("time")
+        return report
+
+    def public_tickers(self, products: list[str], transport=None) -> dict:
+        rows = []
+        for product_id in products:
+            rows.append(_public_ticker(product_id, transport))
+        return {"source": "coinbase_exchange_public", "tickers": rows}
+
+    def _saved_backtests(self) -> dict | None:
+        from pathlib import Path
+
+        path = Path(__file__).resolve().parents[4] / "docs" / "research" / "backtests" / "public-candles.json"
+        if not path.exists():
+            return None
+        import json
+
+        return json.loads(path.read_text(encoding="utf-8"))
 
     def list_orders(self) -> dict:
         return {"orders": [public_order(item) for item in self.broker.historical_orders()]}
@@ -327,8 +444,9 @@ class CoinbaseService:
 
     def _intent(self, prepared: dict, product: dict | None, fee_bps, slip_bps, now: datetime) -> OrderIntent:
         quote = Decimal(str(prepared.get("quote_size") or prepared.get("notional") or "0"))
-        if quote <= 0 and prepared.get("base_size") and prepared.get("limit_price"):
-            quote = Decimal(str(prepared["base_size"])) * Decimal(str(prepared["limit_price"]))
+        price = prepared.get("entry_price") or prepared.get("limit_price")
+        if quote <= 0 and prepared.get("base_size") and price:
+            quote = Decimal(str(prepared["base_size"])) * Decimal(str(price))
         currency = self.settings.account_currency
         if product and product.get("quote_currency"):
             currency = str(product["quote_currency"]).upper()
@@ -382,3 +500,26 @@ class CoinbaseService:
             payload=payload,
             now=self.clock(),
         )
+
+
+def _public_ticker(product_id: str, transport) -> dict:
+    url = f"https://api.exchange.coinbase.com/products/{product_id}/ticker"
+    try:
+        if transport is None:
+            import httpx
+
+            response = httpx.get(url, timeout=10)
+            status, text = response.status_code, response.text
+        else:
+            status, text = transport.get(url, 10)
+        if status != 200:
+            return {"product_id": product_id, "price": None, "detail": "Keine Daten"}
+        import json
+
+        body = json.loads(text)
+        price = body.get("price")
+        if price in (None, ""):
+            return {"product_id": product_id, "price": None, "detail": "Keine Daten"}
+        return {"product_id": product_id, "price": str(price), "time": body.get("time"), "bid": body.get("bid"), "ask": body.get("ask")}
+    except Exception:
+        return {"product_id": product_id, "price": None, "detail": "Keine Daten"}

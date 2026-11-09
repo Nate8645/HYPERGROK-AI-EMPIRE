@@ -135,6 +135,13 @@ class FakeCoinbase:
         self._hit("get_api_key_permissions")
         return self.permissions
 
+    def get_order(self, order_id: str, **kwargs):
+        self._hit("get_order")
+        if isinstance(self.created, Exception):
+            raise self.created
+        response = (self.created or {}).get("success_response") or {}
+        return {"order": response}
+
     def cancel_orders(self, order_ids):
         self._hit("cancel_orders")
         self.cancelled = list(order_ids)
@@ -575,6 +582,8 @@ def test_pages_build_has_no_private_desk_data() -> None:
     assert 'VITE_BACKEND_URL: ""' in pages
     monitor = "\n".join(path.read_text(encoding="utf-8") for path in (root / "monitor/src").rglob("*") if path.suffix in {".ts", ".tsx", ".json"})
     assert "/api/coinbase/balances" not in monitor
+    assert "10.896768" not in monitor
+    assert "/api/approvals" not in monitor
     assert "COINBASE_API_PRIVATE_KEY" not in monitor
     assert "BEGIN PRIVATE KEY" not in monitor
 

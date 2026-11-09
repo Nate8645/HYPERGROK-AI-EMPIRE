@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from decimal import Decimal
 
 from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict, Field
@@ -176,6 +177,65 @@ def evaluate_risk(body: OrderIntent, request: Request) -> RiskDecision:
     return request.app.state.risk_service.evaluate(body, utcnow())
 
 
+@router.get("/api/risk/full-capital-simulation")
+def full_capital_simulation(request: Request) -> dict:
+    import json
+    from pathlib import Path
+
+    from hypergrok.risk.full_capital import assess_full_capital
+
+    root = Path(__file__).resolve().parents[3]
+    candle_path = root / "docs" / "research" / "coinbase-candles-2026-11-09.json"
+    read_path = root / "backend" / "tests" / "fixtures" / "coinbase_read_2026-11-09.json"
+    if not candle_path.exists() or not read_path.exists():
+        return {"status": "REJECT", "reasons": ["missing_history"], "live_preview": "Keine Daten", "limits_replaced": False}
+    candles = json.loads(candle_path.read_text(encoding="utf-8"))
+    snapshot = json.loads(read_path.read_text(encoding="utf-8"))
+    book = snapshot["btc_usdc_book"]
+    bid = Decimal(book["bids"][0]["price"])
+    ask = Decimal(book["asks"][0]["price"])
+    spread = (ask - bid) / ((ask + bid) / 2)
+    product = candles["products"]["BTC-USD"]
+    result = request.app.state.orchestrator.risk_manager.review_full_capital(
+        balance=Decimal(snapshot["balances"][0]["available"]),
+        entry_fee_rate=Decimal(snapshot["fee_tier"]["taker_fee_rate"]),
+        exit_fee_rate=Decimal(snapshot["fee_tier"]["taker_fee_rate"]),
+        spread_rate=spread,
+        slippage_rate=request.app.state.settings.default_slippage_bps_round_trip / Decimal("10000"),
+        minute_candles=product["minute"],
+        daily_candles=product["daily"],
+        max_loss_fraction=request.app.state.settings.max_planned_risk_fraction,
+        quote_increment=Decimal("0.01"),
+        capital_fraction=Decimal("1"),
+    )
+    result["sample"] = {
+        "minute_product": "BTC-USD",
+        "minute_bars": len(product["minute"]),
+        "minute_start": product["minute"][0]["time"],
+        "minute_end": product["minute"][-1]["time"],
+        "daily_bars": len(product["daily"]),
+        "daily_start": product["daily"][0]["time"],
+        "daily_end": product["daily"][-1]["time"],
+        "note": "BTC-USDC 1-minute history was not usable on this fetch. Percentage moves are from BTC-USD. The balance is the USDC snapshot. This is not a live order.",
+    }
+    result["live_preview"] = "Keine Daten"
+    result["limits_replaced"] = False
+    return result
+
+
+@router.get("/api/autonomy")
+def autonomy_status(request: Request) -> dict:
+    from hypergrok.venues.coinbase.autonomy import autonomous_armed, autonomous_blockers
+
+    now = utcnow()
+    settings = request.app.state.settings
+    return {
+        "armed": autonomous_armed(settings, now),
+        "enabled": settings.autonomous_enabled,
+        "blockers": autonomous_blockers(settings, now),
+    }
+
+
 @router.get("/api/risk/decisions")
 def list_decisions(request: Request, limit: int = Query(default=50, ge=1, le=200)) -> dict:
     return {"decisions": request.app.state.store.list_risk_decisions(limit)}
@@ -194,6 +254,13 @@ def get_journal(journal_id: int, request: Request) -> dict:
 @router.post("/api/desk/run", response_model=DeskRunResult)
 def run_desk(body: DeskIdea, request: Request) -> DeskRunResult:
     return request.app.state.orchestrator.run(body, utcnow())
+
+
+@router.post("/api/desk/team")
+def run_team(body: DeskIdea, request: Request) -> dict:
+    from hypergrok.pipeline import run_team_case
+
+    return run_team_case(request.app.state.orchestrator, body, now=utcnow())
 
 
 @router.post("/api/approvals")

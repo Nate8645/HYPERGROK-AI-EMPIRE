@@ -32,6 +32,15 @@ class CoinbaseBroker:
                 quote_size=prepared.get("quote_size"),
                 base_size=prepared.get("base_size"),
             )
+        elif prepared["order_type"] == "stop_limit":
+            raw = self.client.preview_stop_limit_order_gtc(
+                product_id=prepared["product_id"],
+                side=side,
+                base_size=prepared["base_size"],
+                limit_price=prepared["limit_price"],
+                stop_price=prepared["stop_price"],
+                stop_direction=prepared.get("stop_direction") or "STOP_DIRECTION_STOP_DOWN",
+            )
         else:
             raw = self.client.preview_limit_order_gtc(
                 product_id=prepared["product_id"],
@@ -81,7 +90,28 @@ class CoinbaseBroker:
         normalized = _normalize_create(raw, client_order_id)
         normalized["retried"] = False
         normalized["fills"] = self.fills_for(client_order_id, normalized.get("order_id"))
+        confirmation = self.confirm(client_order_id, normalized.get("order_id"))
+        if confirmation:
+            normalized["confirmation"] = confirmation
         return normalized
+
+    def confirm(self, client_order_id: str, order_id: str | None) -> dict | None:
+        """Read the order back. A failed read reconciles and does not place again."""
+        if order_id and hasattr(self.client, "get_order"):
+            try:
+                raw = self.client.get_order(order_id)
+            except Exception as exc:
+                if classify_exception(exc) == "unknown_outcome":
+                    return self.reconcile(client_order_id)
+                return self.reconcile(client_order_id)
+            data = as_dict(raw)
+            order = public_order(data.get("order") or data)
+            if order:
+                order["confirmed"] = True
+                order["client_order_id"] = order.get("client_order_id") or client_order_id
+                order["fills"] = self.fills_for(client_order_id, order.get("order_id") or order_id)
+                return order
+        return self.reconcile(client_order_id)
 
     def _place_once(self, prepared: dict):
         side = prepared["side"].upper()

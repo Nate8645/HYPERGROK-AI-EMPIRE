@@ -117,6 +117,10 @@ The kill switch still blocks new orders. When Coinbase live flags and credential
 
 Before a live spot submit, the desk can read `GET /api/v3/brokerage/key_permissions`. If `can_transfer` is true, or View or Trade is missing, that order is rejected and `live_armed` becomes false. The check is not a live call in tests. A client order id is written to SQLite before the place call. After a restart the new process reconciles that id and does not send it again.
 
+BUY and SELL both use that adapter: market or limit, with post-only on limit orders. The path is Risk Manager, preview, approval token, submit, then `get_order`. A sell larger than the base balance is rejected. `POST /api/desk/team` runs all seven agents and can preview; it does not submit while the live flags are off. `GET /api/coinbase/utilization` sizes 10/25/50/75/100% of the quote balance the API returns. A separate simulation, `GET /api/risk/full-capital-simulation`, sizes a fully funded order after reserving both fees and rounding to 0.01. It still uses the 1% loss rule and does not send. Autonomous mode is off; the unset fields and the values that would need your confirmation are in `docs/ACTIVATION_SUMMARY.md`. Details and the 2026-11-09 read-only snapshot are in `docs/COINBASE_READINESS.md`.
+
+The private iPhone desk is `frontend/` (`npm run dev -- --host 0.0.0.0`, then `http://<computer-lan-ip>:5173`). It proxies `/api` to the backend. The public monitor stays in `monitor/` and does not show balances, approvals, or order buttons. If both dev servers run, start the monitor with `--port 5174`.
+
 ```bash
 cd frontend
 npm install
