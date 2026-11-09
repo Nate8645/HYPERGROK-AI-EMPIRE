@@ -72,6 +72,7 @@ class RiskEngine:
         stop_fraction: Decimal,
         fee_bps: Decimal | None,
         slippage_bps: Decimal | None,
+        reserve_fraction: Decimal | None = None,
     ) -> SizingBounds:
         """Upper bounds the strategist may *propose*. They are not a PASS."""
 
@@ -82,7 +83,11 @@ class RiskEngine:
         if equity <= 0:
             raise ValueError("equity must be positive")
         risk_rate = stop_fraction + cost_rate
-        reserve = self.settings.hyperliquid_reserve_fraction
+        reserve = (
+            self.settings.hyperliquid_reserve_fraction
+            if reserve_fraction is None
+            else reserve_fraction
+        )
         denominator = ONE + cost_rate
         return SizingBounds(
             by_balance=equity / denominator,
@@ -152,11 +157,11 @@ class RiskEngine:
             not duplicate,
             "client order id already used" if duplicate else "new client order id",
         )
-        venue_ok = order.venue == "hyperliquid"
+        venue_ok = order.venue in {"hyperliquid", "coinbase"}
         add(
             "venue_not_enabled",
             venue_ok,
-            "hyperliquid is enabled" if venue_ok else f"{order.venue} is not enabled in phase 1",
+            "venue is enabled" if venue_ok else f"{order.venue} is not enabled",
         )
         self._add_market_data_checks(add, order.market_data_time, now)
 
@@ -171,7 +176,7 @@ class RiskEngine:
                 summary_prefix="reduce order; entry limits were not applied",
             )
 
-        breakdown = self._add_entry_checks(add, order, account)
+        breakdown = self._add_entry_checks(add, order, account, now)
         return self._finish(order, account, checks, breakdown=breakdown)
 
     def _add_market_data_checks(self, add, market_data_time: datetime | None, now: datetime) -> None:
@@ -188,7 +193,7 @@ class RiskEngine:
         else:
             add("stale_market_data", True, f"age {age:.3f}s within {limit}s")
 
-    def _add_entry_checks(self, add, order: OrderIntent, account: AccountState) -> dict[str, Decimal | None]:
+    def _add_entry_checks(self, add, order: OrderIntent, account: AccountState, now: datetime) -> dict[str, Decimal | None]:
         settings = self.settings
         fee_bps, slip_bps = self.assumed_bps(order.fee_bps_round_trip, order.slippage_bps_round_trip)
         fee_loss = order.notional * fee_bps / BPS
@@ -206,7 +211,7 @@ class RiskEngine:
         free_after = account.equity - cash
         reserve_required = account.equity * settings.hyperliquid_reserve_fraction
 
-        self._add_min_notional(add, order)
+        self._add_min_notional(add, order, now)
         loss_limit = account.start_of_day_equity * settings.max_daily_loss_fraction
         daily_ok = account.realized_pnl_today > -loss_limit
         add(
@@ -239,6 +244,9 @@ class RiskEngine:
             reserve_detail = (
                 f"free collateral after the order {free_after} versus required reserve {reserve_required}"
             )
+        elif order.venue == "coinbase":
+            reserve_ok = True
+            reserve_detail = "coinbase spot is fully funded; the hyperliquid margin reserve does not apply"
         else:
             reserve_ok = False
             reserve_detail = "reserve cannot be cleared for a venue that is not enabled"
@@ -263,7 +271,7 @@ class RiskEngine:
             "free_collateral_after": free_after,
         }
 
-    def _add_min_notional(self, add, order: OrderIntent) -> None:
+    def _add_min_notional(self, add, order: OrderIntent, now: datetime) -> None:
         minimum = self.settings.min_order_notional
         minimum_currency = self.settings.min_order_notional_currency
         if order.notional_currency == minimum_currency:
@@ -277,6 +285,20 @@ class RiskEngine:
             return
         rate = order.usd_per_notional_currency
         if minimum_currency == "USD" and rate is not None and rate > 0:
+            if order.fx_as_of is not None or order.fx_source is not None:
+                allowed = {"coinbase_public_exchange_rates", "explicit_config"}
+                if order.fx_source not in allowed or order.fx_as_of is None:
+                    add("missing_fx_rate", False, "FX quote needs a documented source and a timestamp")
+                    add("min_notional_unverified", False, "fx quote is incomplete")
+                    add("min_notional", False, "fx quote is incomplete")
+                    return
+                age = (ensure_utc(now) - ensure_utc(order.fx_as_of)).total_seconds()
+                if age > self.settings.max_fx_age_seconds or age < -2:
+                    add("stale_fx_rate", False, f"fx age {age:.3f}s exceeds {self.settings.max_fx_age_seconds}s")
+                    add("min_notional_unverified", False, "stale fx rate was not used")
+                    add("min_notional", False, "stale fx rate was not used")
+                    return
+                add("stale_fx_rate", True, f"fx age {age:.3f}s from {order.fx_source}")
             comparable = order.notional * rate
             add(
                 "min_notional_unverified",

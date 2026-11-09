@@ -7,10 +7,12 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from hypergrok import __version__
 from hypergrok.api.routes import router
+from hypergrok.clock import utcnow
 from hypergrok.config import Settings
 from hypergrok.db import init_db, make_engine, make_session_factory
 from hypergrok.events import EventBus
@@ -22,8 +24,23 @@ from hypergrok.risk.engine import RiskEngine
 from hypergrok.risk.service import RiskService
 from hypergrok.store import DeskStore
 from hypergrok.errors import DeskError
+from hypergrok.venues.coinbase.adapter import CoinbaseExecutionAdapter
+from hypergrok.venues.coinbase.service import CoinbaseService
 
 logger = logging.getLogger(__name__)
+
+
+class _LazyCoinbase:
+    """Builds the broker only when a live Coinbase order is actually sent."""
+
+    transmits = True
+    name = "coinbase"
+
+    def __init__(self, service: CoinbaseService) -> None:
+        self.service = service
+
+    def execute(self, would_send: dict):
+        return CoinbaseExecutionAdapter(self.service.broker).execute(would_send)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -38,6 +55,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     risk_service = RiskService(store, risk_engine, bus)
     gate = ExecutionGate(settings, store)
     adapter = DryRunAdapter()
+    coinbase = CoinbaseService(
+        settings,
+        risk_service=risk_service,
+        gate=gate,
+        dry_run=adapter,
+        store=store,
+        clock=utcnow,
+    )
     orchestrator = Orchestrator(
         settings=settings,
         store=store,
@@ -47,6 +72,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         adapter=adapter,
         bus=bus,
     )
+    orchestrator.coinbase = coinbase
+    orchestrator.trader.coinbase = CoinbaseExecutionAdapter(coinbase.broker) if False else _LazyCoinbase(coinbase)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -76,6 +103,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.gate = gate
     app.state.adapter = adapter
     app.state.orchestrator = orchestrator
+    app.state.coinbase = coinbase
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.exception_handler(DeskError)
     async def handle_desk_error(_request: Request, exc: DeskError) -> JSONResponse:
@@ -91,7 +125,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "context": {
                 "phase": 1,
                 "live_trading_enabled": settings.live_trading_enabled,
-                "transmits_orders": False,
+                "transmits_orders": coinbase.live_armed(),
                 "currency": settings.account_currency,
                 "implementation": "rule_based",
             }

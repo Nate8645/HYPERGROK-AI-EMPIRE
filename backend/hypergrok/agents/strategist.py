@@ -51,12 +51,24 @@ class Strategist:
         else:
             stop = entry * (ONE + stop_fraction)
 
+        fee_bps = (
+            idea.fee_bps_round_trip
+            if idea.fee_bps_round_trip is not None
+            else self.settings.default_fee_bps_round_trip
+        )
+        slip_bps = (
+            idea.slippage_bps_round_trip
+            if idea.slippage_bps_round_trip is not None
+            else self.settings.default_slippage_bps_round_trip
+        )
+        reserve = Decimal("0") if case.venue == "coinbase" else None
         try:
             bounds = self.engine.sizing_bounds(
                 equity=account.equity,
                 stop_fraction=stop_fraction,
-                fee_bps=self.settings.default_fee_bps_round_trip,
-                slippage_bps=self.settings.default_slippage_bps_round_trip,
+                fee_bps=fee_bps,
+                slippage_bps=slip_bps,
+                reserve_fraction=reserve,
             )
         except ValueError as exc:
             return self._no_trade([str(exc)])
@@ -71,12 +83,16 @@ class Strategist:
             notional = floor_money(min(bounds.by_balance, bounds.by_reserve, bounds.by_risk))
             sizing_mode = "risk_limited"
 
+        if idea.quote_increment is not None:
+            from hypergrok.money import floor_to_increment
+
+            notional = floor_to_increment(notional, idea.quote_increment)
         if notional <= 0:
             return self._no_trade(["sized notional is zero"])
 
         order = OrderIntent(
             client_order_id=idea.client_order_id or f"hg-{case.case_id}",
-            venue="hyperliquid",
+            venue=case.venue,
             symbol=case.symbol,
             side=side,
             order_kind="entry",
@@ -89,6 +105,8 @@ class Strategist:
             fee_bps_round_trip=bounds.fee_bps,
             slippage_bps_round_trip=bounds.slippage_bps,
             usd_per_notional_currency=idea.usd_per_notional_currency,
+            fx_source=idea.fx_source,
+            fx_as_of=idea.fx_as_of,
         )
         sizing = {
             "mode": sizing_mode,

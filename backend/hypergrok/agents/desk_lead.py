@@ -13,8 +13,10 @@ class DeskLead:
 
     def run(self, idea: DeskIdea, *, case_id: str) -> DeskCase:
         reasons: list[str] = []
-        if idea.venue != "hyperliquid":
+        if idea.venue not in {"hyperliquid", "coinbase"}:
             reasons.append("venue_not_enabled")
+        if idea.venue == "coinbase" and idea.product_type and idea.product_type.upper() != "SPOT":
+            reasons.append("not_spot")
         if not idea.thesis.strip():
             reasons.append("thesis_required")
         if reasons:
@@ -31,7 +33,7 @@ class DeskLead:
             status="accepted",
             case_id=case_id,
             reasons=["accepted"],
-            summary=f"case opened for {idea.symbol} on hyperliquid",
+            summary=f"case opened for {idea.symbol} on {idea.venue}",
             symbol=idea.symbol,
             venue=idea.venue,
             side=idea.side,

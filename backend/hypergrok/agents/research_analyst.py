@@ -17,12 +17,17 @@ class ResearchAnalyst:
 
     def run(self, research: ResearchInput | None) -> ResearchNote:
         if research is None or (research.trend == "unknown" and research.funding_bps is None):
+            inputs: list[str] = []
+            reasons = ["no structured research inputs were supplied"]
+            if research is not None and research.observed_spread_bps is not None:
+                inputs.append("observed_spread_bps")
+                reasons.append("observed spread is recorded and is not a directional signal")
             return ResearchNote(
                 status="insufficient_evidence",
                 summary="no structured research inputs; nothing was fetched or inferred",
                 stance="insufficient_evidence",
-                reasons=["no structured research inputs were supplied"],
-                inputs_used=[],
+                reasons=reasons,
+                inputs_used=inputs,
             )
 
         inputs: list[str] = []
@@ -34,6 +39,9 @@ class ResearchAnalyst:
         if research.notes.strip():
             inputs.append("notes_recorded_not_interpreted")
             reasons.append("free-text notes are stored and are not turned into a signal")
+        if research.observed_spread_bps is not None:
+            inputs.append("observed_spread_bps")
+            reasons.append("observed spread is recorded and is not a directional signal")
 
         funding = research.funding_bps
         crowded_long = funding is not None and funding > CROWDING_BPS

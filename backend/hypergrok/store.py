@@ -385,6 +385,33 @@ class DeskStore:
         finally:
             session.close()
 
+    def ids_for_risk_recheck(self, client_order_id: str, case_id: str | None) -> set[str]:
+        """Ids already used. The in-flight case is not treated as its own duplicate."""
+
+        session = self._session()
+        try:
+            ids = {row.client_order_id for row in session.scalars(select(ClientOrderRow))}
+            if not case_id:
+                return ids
+            rows = session.scalars(
+                select(RiskDecisionRow).where(RiskDecisionRow.client_order_id == client_order_id)
+            ).all()
+            if rows and all(row.case_id == case_id for row in rows):
+                ids.discard(client_order_id)
+            return ids
+        finally:
+            session.close()
+
+    def mark_approval_used(self, token: str, now: datetime) -> None:
+        session = self._session()
+        try:
+            row = session.get(ApprovalRow, token)
+            if row is not None and row.used_at is None:
+                row.used_at = isoformat(now)
+                session.commit()
+        finally:
+            session.close()
+
     def get_approval(self, token: str) -> dict | None:
         session = self._session()
         try:
@@ -410,8 +437,9 @@ class DeskStore:
         transmitted: bool,
         payload: dict,
         now: datetime,
+        venue: str | None = None,
     ) -> int:
-        if transmitted:
+        if transmitted and venue != "coinbase":
             raise DeskError("transmission_blocked", "phase 1 cannot record a transmitted order", 500)
         session = self._session()
         try:
@@ -422,7 +450,7 @@ class DeskStore:
                 mode=mode,
                 status=status,
                 reason=reason,
-                transmitted=False,
+                transmitted=bool(transmitted) if venue == "coinbase" else False,
                 payload_json=redact(to_jsonable(payload)),
             )
             session.add(row)

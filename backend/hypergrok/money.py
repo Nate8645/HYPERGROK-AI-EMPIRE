@@ -38,3 +38,14 @@ def floor_money(amount: Decimal, quantum: str = "0.01") -> Decimal:
     if amount <= 0:
         return Decimal("0")
     return amount.quantize(Decimal(quantum), rounding=ROUND_DOWN)
+
+
+def floor_to_increment(amount: Decimal, increment: Decimal) -> Decimal:
+    """Round down to an exchange increment. Never rounds up."""
+
+    if increment <= 0:
+        raise ValueError("increment must be positive")
+    if amount <= 0:
+        return Decimal("0")
+    steps = (amount / increment).to_integral_value(rounding=ROUND_DOWN)
+    return steps * increment

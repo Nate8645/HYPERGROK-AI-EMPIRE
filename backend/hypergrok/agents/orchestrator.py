@@ -57,7 +57,8 @@ class Orchestrator:
         self.research = ResearchAnalyst()
         self.strategist = Strategist(settings, engine)
         self.risk_manager = RiskManager(risk_service)
-        self.trader = ExecutionTrader(gate, adapter, store)
+        self.coinbase = None
+        self.trader = ExecutionTrader(gate, adapter, store, engine)
         self.reviewer = TradeReviewer(store)
 
     def run(self, idea: DeskIdea, now: datetime | None = None) -> DeskRunResult:
@@ -76,9 +77,18 @@ class Orchestrator:
             for name in DOWNSTREAM:
                 self._emit(name, "agent_event", "skipped", case_id, "desk lead rejected the idea", {}, moment)
         else:
-            market = self.market.run(idea.market_snapshot, symbol=case.symbol, now=moment)
+            snapshot = idea.market_snapshot
+            if snapshot is None and idea.load_coinbase_book and self.coinbase is not None:
+                snapshot = self.coinbase.safe_snapshot(idea.symbol)
+            market = self.market.run(snapshot, symbol=case.symbol, now=moment)
             self._emit("market_analyst", "agent_event", market.status, case_id, market.summary, market, moment)
-            research = self.research.run(idea.research)
+            research_input = idea.research
+            if case.venue == "coinbase" and market.spread_bps is not None:
+                from hypergrok.domain import ResearchInput
+
+                base = idea.research or ResearchInput()
+                research_input = base.model_copy(update={"observed_spread_bps": market.spread_bps})
+            research = self.research.run(research_input)
             self._emit("research_analyst", "agent_event", research.status, case_id, research.summary, research, moment)
             account = self.store.load_account(moment)
             strategy = self.strategist.run(idea, case, market, research, account)

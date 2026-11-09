@@ -1,8 +1,8 @@
 # HYPERGROK AI EMPIRE
 
-Phase 1 of a multi-agent crypto trading desk aimed at Hyperliquid, with Solana left for a later phase. This repository currently contains a Python desk backend: a hard risk engine, a dry-run execution gate, seven rule-based agents, a read-only Hyperliquid market-data client, and SQLite persistence.
+Phase 1 plus a Coinbase spot adapter. Hyperliquid order routing, Solana, wallet signing, and a hosted dashboard login are still absent. The backend is a rule-based FastAPI desk. By default it does not send orders.
 
-The process does **not** sign transactions, hold private keys, or send orders. Live trading is off unless `LIVE_TRADING_ENABLED=true`, and even then a live order is refused because no transmitting adapter exists.
+Coinbase Advanced Trade can send a spot order only when every live prerequisite below is set. Authentication is the official `coinbase-advanced-py` SDK JWT for the REST API. That is not a blockchain signature and the desk does not hold a wallet seed.
 
 ## Current status
 
@@ -20,7 +20,9 @@ Not implemented yet:
 - Real Hyperliquid order adapter
 - Solana / Pump.fun adapters
 - Wallet signing isolation
-- Dashboard
+- Authenticated public hosting for the dashboard
+
+The local dashboard is in `frontend/`. It is rule-based and shows no secrets. It is not a login wall.
 
 Also not in this phase: exchange position sync, a live fee schedule, an LLM analyst, authentication on the API, and any path that contacts an RPC. The paper account in SQLite is local desk state, not an exchange balance. The market-data client is capable of calling the public info endpoint, but the automated tests never do; they mock the transport. Do not treat a dry-run journal row as a fill.
 
@@ -93,6 +95,32 @@ If the paper account is CHF and the minimum is 10 USD, the order must include `u
 - A live order with a valid token is rejected with `live_transmission_not_implemented`. The token is not consumed. Nothing is signed or sent.
 
 Create a token with `POST /api/approvals` and pass it on that one idea as `approval_token`. Tokens are redacted in logs and in the journal payload.
+
+## Coinbase spot
+
+Create a CDP API key in the Coinbase Developer Platform with only **View** and **Trade**. Do not enable Transfer, Withdraw, or Convert. Download the JSON key and keep it outside the repository.
+
+```bash
+export COINBASE_API_KEY_FILE=/secure/path/cdp_api_key.json
+# or COINBASE_API_KEY_NAME=organizations/.../apiKeys/... and COINBASE_API_PRIVATE_KEY=...
+export LIVE_TRADING_ENABLED=false
+export COINBASE_LIVE_ENABLED=false
+export COINBASE_PRODUCT_ALLOWLIST=
+export COINBASE_MAX_CAPITAL=0
+```
+
+Live spot orders also need `LIVE_TRADING_ENABLED=true`, `COINBASE_LIVE_ENABLED=true`, a non-empty product allowlist, `COINBASE_MAX_CAPITAL` greater than 0, and a per-order approval token from `POST /api/approvals`. Anything missing stays on the dry-run adapter. Other venues still return `live_transmission_not_implemented`.
+
+CHF notionals are not converted with a guessed rate. Set both `HYPERGROK_FX_USD_PER_CHF` and `HYPERGROK_FX_AS_OF`, or read Coinbase public `v2/exchange-rates`. A missing or stale quote rejects the conversion. Product minimums and increments come from product metadata. Fees in the risk check come from the transaction-summary maker/taker rates. P&L is average cost from fills, with fees in the cost basis, at `GET /api/coinbase/portfolio`.
+
+The kill switch still blocks new orders. When Coinbase live flags and credentials are present it also cancels open spot orders. It does not withdraw.
+
+```bash
+cd frontend
+npm install
+npm test
+npm run dev
+```
 
 ## Setup
 

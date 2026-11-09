@@ -12,6 +12,7 @@ from fastapi import APIRouter, Query, Request, WebSocket, WebSocketDisconnect
 from pydantic import BaseModel, ConfigDict, Field
 
 from hypergrok.agents.catalog import AGENT_KEYS, AGENTS
+from hypergrok.api.coinbase import router as coinbase_router
 from hypergrok.agents.schemas import DeskRunResult
 from hypergrok.clock import isoformat, utcnow
 from hypergrok.domain import (
@@ -26,6 +27,7 @@ from hypergrok.domain import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+router.include_router(coinbase_router)
 
 
 class ApprovalCreate(BaseModel):
@@ -48,7 +50,7 @@ def health(request: Request) -> dict:
         "implementation": "rule_based",
         "live_trading_enabled": settings.live_trading_enabled,
         "kill_switch_engaged": kill.engaged,
-        "transmits_orders": False,
+        "transmits_orders": request.app.state.coinbase.live_armed(),
         "database": "ok" if database_ok else "error",
     }
 
@@ -63,7 +65,7 @@ async def ws_events(websocket: WebSocket) -> None:
         {
             "type": "ws.connected",
             "at": isoformat(utcnow()),
-            "transmits_orders": False,
+            "transmits_orders": websocket.app.state.coinbase.live_armed(),
         }
     )
     try:
@@ -114,7 +116,7 @@ def risk_config(request: Request) -> dict:
         "default_stop_fraction": format(settings.default_stop_fraction, "f"),
         "max_market_data_age_seconds": settings.max_market_data_age_seconds,
         "live_trading_enabled": settings.live_trading_enabled,
-        "transmits_orders": False,
+        "transmits_orders": request.app.state.coinbase.live_armed(),
         "phase": 1,
         "min_order_notional_note": (
             "Default minimum is 10 USD, the Hyperliquid minimum order value "
@@ -147,13 +149,18 @@ def post_kill_switch(body: KillSwitchUpdate, request: Request) -> KillSwitchStat
         updated_by=body.updated_by,
         now=now,
     )
+    cancel = {"attempted": False, "cancelled": [], "reason": "not_engaged"}
+    if state.engaged:
+        cancel = request.app.state.coinbase.cancel_open_if_armed()
+    payload = state.model_dump()
+    payload["coinbase_cancel"] = cancel
     event = request.app.state.store.add_event(
         agent="system",
         event_type="kill_switch",
         status="engaged" if state.engaged else "disengaged",
         case_id=None,
         summary=f"kill switch {'engaged' if state.engaged else 'disengaged'}: {state.reason}",
-        payload=state.model_dump(),
+        payload=payload,
         now=now,
     )
     request.app.state.bus.publish(event)

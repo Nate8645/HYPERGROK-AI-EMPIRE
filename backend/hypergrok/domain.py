@@ -105,6 +105,8 @@ class OrderIntent(BaseModel):
     fee_bps_round_trip: Dec | None = None
     slippage_bps_round_trip: Dec | None = None
     usd_per_notional_currency: Dec | None = None
+    fx_source: str | None = None
+    fx_as_of: datetime | None = None
 
     @field_validator("client_order_id")
     @classmethod
@@ -123,8 +125,8 @@ class OrderIntent(BaseModel):
     @classmethod
     def _symbol(cls, value: str) -> str:
         cleaned = value.strip().upper()
-        if not re.fullmatch(r"[A-Z0-9]{1,15}", cleaned):
-            raise ValueError("symbol must be 1-15 alphanumeric characters")
+        if not re.fullmatch(r"[A-Z0-9]{1,20}(?:-[A-Z0-9]{1,20})?", cleaned):
+            raise ValueError("symbol must be an alphanumeric product id")
         return cleaned
 
     @field_validator("notional_currency")
@@ -159,8 +161,8 @@ class MarketSnapshot(BaseModel):
     @classmethod
     def _symbol(cls, value: str) -> str:
         cleaned = value.strip().upper()
-        if not re.fullmatch(r"[A-Z0-9]{1,15}", cleaned):
-            raise ValueError("symbol must be 1-15 alphanumeric characters")
+        if not re.fullmatch(r"[A-Z0-9]{1,20}(?:-[A-Z0-9]{1,20})?", cleaned):
+            raise ValueError("symbol must be an alphanumeric product id")
         return cleaned
 
     def observed_at(self) -> datetime:
@@ -177,6 +179,7 @@ class ResearchInput(BaseModel):
 
     trend: Literal["up", "down", "flat", "unknown"] = "unknown"
     funding_bps: Dec | None = None
+    observed_spread_bps: Dec | None = None
     notes: str = Field(default="", max_length=2000)
 
 
@@ -194,15 +197,26 @@ class DeskIdea(BaseModel):
     market_snapshot: MarketSnapshot | None = None
     research: ResearchInput | None = None
     usd_per_notional_currency: Dec | None = None
+    fx_source: str | None = None
+    fx_as_of: datetime | None = None
     request_live: bool = False
     approval_token: str | None = None
+    order_type: Literal["market", "limit"] | None = None
+    post_only: bool = False
+    base_size: Dec | None = None
+    limit_price: Dec | None = None
+    load_coinbase_book: bool = False
+    product_type: str | None = None
+    quote_increment: Dec | None = None
+    fee_bps_round_trip: Dec | None = None
+    slippage_bps_round_trip: Dec | None = None
 
     @field_validator("symbol")
     @classmethod
     def _symbol(cls, value: str) -> str:
         cleaned = value.strip().upper()
-        if not re.fullmatch(r"[A-Z0-9]{1,15}", cleaned):
-            raise ValueError("symbol must be 1-15 alphanumeric characters")
+        if not re.fullmatch(r"[A-Z0-9]{1,20}(?:-[A-Z0-9]{1,20})?", cleaned):
+            raise ValueError("symbol must be an alphanumeric product id")
         return cleaned
 
     @field_validator("venue")

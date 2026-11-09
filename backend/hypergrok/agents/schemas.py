@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, model_validator
 
 from hypergrok.agents.catalog import MODE
 from hypergrok.domain import OrderIntent, RiskDecision
@@ -64,7 +64,7 @@ class StrategyProposal(BaseModel):
 class ExecutionReport(BaseModel):
     agent: Literal["execution_trader"] = "execution_trader"
     mode: Literal["rule_based"] = MODE
-    status: Literal["recorded", "rejected", "skipped"]
+    status: Literal["recorded", "rejected", "skipped", "submitted", "unknown"]
     transmitted: bool
     summary: str
     reasons: list[str]
@@ -72,13 +72,13 @@ class ExecutionReport(BaseModel):
     gate_reason: str | None = None
     approval_consumed: bool = False
     execution_mode: str | None = None
+    fills: list[dict] = Field(default_factory=list)
 
-    @field_validator("transmitted")
-    @classmethod
-    def _not_transmitted(cls, value: bool) -> bool:
-        if value is not False:
-            raise ValueError("phase 1 cannot mark an order transmitted")
-        return value
+    @model_validator(mode="after")
+    def _transmission_scope(self) -> Self:
+        if self.transmitted and self.execution_mode != "live":
+            raise ValueError("only a live execution can be marked transmitted")
+        return self
 
 
 class DeskRunResult(BaseModel):

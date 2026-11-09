@@ -84,6 +84,8 @@ def _outcome(
         return "risk_rejected"
     if execution is not None and execution.status == "recorded":
         return "dry_run_recorded"
+    if execution is not None and execution.status == "submitted":
+        return "order_submitted"
     if execution is not None and execution.status == "rejected":
         return "execution_rejected"
     return "unreviewed"

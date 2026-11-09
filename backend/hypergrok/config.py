@@ -6,10 +6,11 @@ a soft default: values other than 1 are rejected at startup.
 
 from __future__ import annotations
 
+from datetime import datetime
 from decimal import Decimal
 from typing import Self
 
-from pydantic import AliasChoices, Field, model_validator
+from pydantic import AliasChoices, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -55,6 +56,60 @@ class Settings(BaseSettings):
             "HYPERGROK_LIVE_TRADING_ENABLED",
         ),
     )
+    coinbase_api_key_name: str = Field(
+        default="",
+        validation_alias=AliasChoices("COINBASE_API_KEY_NAME", "HYPERGROK_COINBASE_API_KEY_NAME"),
+    )
+    coinbase_api_private_key: SecretStr = Field(
+        default_factory=lambda: SecretStr(""),
+        validation_alias=AliasChoices("COINBASE_API_PRIVATE_KEY", "HYPERGROK_COINBASE_API_PRIVATE_KEY"),
+    )
+    coinbase_api_key_file: str = Field(
+        default="",
+        validation_alias=AliasChoices("COINBASE_API_KEY_FILE", "HYPERGROK_COINBASE_API_KEY_FILE"),
+    )
+    coinbase_live_enabled: bool = Field(
+        default=False,
+        validation_alias=AliasChoices("COINBASE_LIVE_ENABLED", "HYPERGROK_COINBASE_LIVE_ENABLED"),
+    )
+    coinbase_product_allowlist: str = Field(
+        default="",
+        validation_alias=AliasChoices("COINBASE_PRODUCT_ALLOWLIST", "HYPERGROK_COINBASE_PRODUCT_ALLOWLIST"),
+    )
+    coinbase_max_capital: Decimal = Field(
+        default=Decimal("0"),
+        validation_alias=AliasChoices("COINBASE_MAX_CAPITAL", "HYPERGROK_COINBASE_MAX_CAPITAL"),
+    )
+    coinbase_max_capital_currency: str = Field(
+        default="",
+        validation_alias=AliasChoices(
+            "COINBASE_MAX_CAPITAL_CURRENCY",
+            "HYPERGROK_COINBASE_MAX_CAPITAL_CURRENCY",
+        ),
+    )
+    fx_usd_per_chf: Decimal | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_FX_USD_PER_CHF"),
+    )
+    fx_as_of: datetime | None = Field(
+        default=None,
+        validation_alias=AliasChoices("HYPERGROK_FX_AS_OF"),
+    )
+    fx_source: str = Field(
+        default="explicit_config",
+        validation_alias=AliasChoices("HYPERGROK_FX_SOURCE"),
+    )
+    max_fx_age_seconds: float = Field(
+        default=300.0,
+        validation_alias=AliasChoices("HYPERGROK_MAX_FX_AGE_SECONDS"),
+    )
+
+    def coinbase_products(self) -> frozenset[str]:
+        return frozenset(
+            part.strip().upper()
+            for part in self.coinbase_product_allowlist.split(",")
+            if part.strip()
+        )
 
     @model_validator(mode="after")
     def _enforce_bounds(self) -> Self:
@@ -82,6 +137,12 @@ class Settings(BaseSettings):
             raise ValueError("max_market_data_age_seconds must be positive")
         if self.hyperliquid_info_timeout_seconds <= 0:
             raise ValueError("hyperliquid_info_timeout_seconds must be positive")
+        if self.max_fx_age_seconds <= 0:
+            raise ValueError("max_fx_age_seconds must be positive")
+        if self.coinbase_max_capital < 0:
+            raise ValueError("coinbase_max_capital cannot be negative")
+        if self.coinbase_max_capital_currency:
+            self.coinbase_max_capital_currency = self.coinbase_max_capital_currency.strip().upper()
         self.account_currency = self.account_currency.strip().upper()
         self.min_order_notional_currency = self.min_order_notional_currency.strip().upper()
         return self

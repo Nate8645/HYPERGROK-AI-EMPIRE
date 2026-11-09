@@ -30,8 +30,17 @@ SENSITIVE_KEYS = {
 
 
 def _key_is_sensitive(key: str) -> bool:
-    lowered = key.lower()
-    return lowered in SENSITIVE_KEYS or lowered.endswith("_token") or lowered.endswith("_secret")
+    lowered = key.lower().replace("-", "_")
+    if lowered in SENSITIVE_KEYS or lowered.endswith("_token") or lowered.endswith("_secret"):
+        return True
+    markers = ("private_key", "privatekey", "api_key", "api_secret", "secret_key", "key_file")
+    return any(marker in lowered for marker in markers)
+
+
+def redact_text(value: str) -> str:
+    if "PRIVATE KEY" in value or "BEGIN OPENSSH" in value or "BEGIN RSA" in value:
+        return "[redacted]"
+    return value
 
 
 def redact(value: Any) -> Any:
@@ -47,6 +56,8 @@ def redact(value: Any) -> Any:
         return [redact(item) for item in value]
     if isinstance(value, tuple):
         return [redact(item) for item in value]
+    if isinstance(value, str):
+        return redact_text(value)
     return value
 
 
@@ -56,7 +67,7 @@ class JsonFormatter(logging.Formatter):
             "ts": isoformat(utcnow()),
             "level": record.levelname,
             "logger": record.name,
-            "message": record.getMessage(),
+            "message": redact_text(record.getMessage()),
         }
         context = getattr(record, "context", None)
         if isinstance(context, dict):

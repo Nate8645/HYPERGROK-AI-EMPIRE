@@ -23,7 +23,7 @@ __all__ = ["fresh_snapshot", "fitting_idea", "make_settings", "sample_order"]
 @pytest.fixture(autouse=True)
 def _clear_desk_env(monkeypatch: pytest.MonkeyPatch) -> None:
     for key in list(os.environ):
-        if key.startswith("HYPERGROK_") or key == "LIVE_TRADING_ENABLED":
+        if key.startswith("HYPERGROK_") or key.startswith("COINBASE_") or key == "LIVE_TRADING_ENABLED":
             monkeypatch.delenv(key, raising=False)
 
 
