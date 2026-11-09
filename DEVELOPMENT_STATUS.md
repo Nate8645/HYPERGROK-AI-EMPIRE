@@ -1,6 +1,6 @@
 # Development status
 
-Updated 2026-11-09 after Phase 4. Phases 5–6 are not started.
+Updated 2026-11-09 after Phase 5. Phase 6 is not started.
 
 ## Phase 1 — desk backend
 
@@ -60,9 +60,23 @@ Updated 2026-11-09 after Phase 4. Phases 5–6 are not started.
 
 - `monitor` vitest: 9 passed. Production build succeeded.
 
+## Phase 5 — integration and QA
+
+- Status: implemented and tested locally. A public deployment is blocked: the API has no authentication, Pages is not enabled, and this session does not change repository settings.
+- `backend/tests/test_integration.py` runs health, the seven agents, Coinbase status, a desk run, and the preview pipeline against one app. The live request is rejected by the execution gate.
+- README has the local startup commands for the API, the desk UI, and the iPhone path on the same Wi-Fi.
+
+### Tests actually run for this phase
+
+- Full pytest with coverage: 72 passed. `hypergrok` line coverage 85% (3249 statements, 477 missed).
+- `pip-audit -r requirements.txt`: no known vulnerabilities.
+- `npm audit --omit=dev` in `frontend/`: 0 vulnerabilities. The full audit, including Vitest, reports 6 (3 moderate, 1 high, 2 critical) in the dev dependency tree. The offered fix is Vitest 5.1.0, a major bump. It was not applied.
+- `monitor` has the same 6 dev-dependency findings. Production `npm audit --omit=dev` was checked on `frontend` only; `monitor` has no production runtime dependencies beyond Vite, which is a dev dependency there.
+- Secret scan for private-key blocks and common token prefixes: the only hit is the test assertion that the monitor source must not contain `BEGIN PRIVATE KEY`.
+
 ### Next step
 
-Phase 5, coverage and the local iPhone startup guide. Resume from this file.
+Phase 6, mocked real-money readiness. Resume from `backend/hypergrok/venues/coinbase/broker.py` and `service.py`.
 
 ### Resume point
 

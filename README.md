@@ -163,6 +163,33 @@ The desk has no authentication. A public URL makes the kill switch and paper acc
 - Cloudflare Tunnel (`cloudflared`) can expose localhost over HTTPS. A named tunnel needs a free Cloudflare account. `cloudflared tunnel --url http://127.0.0.1:8000` gives a temporary URL and still requires installing their client.
 - ngrok and localtunnel also need an install. ngrok’s stable HTTPS address needs a free account. Treat all of these as untrusted until you add your own access control. Do not put the tunnel URL into the Pages build.
 
+## Local startup
+
+The API has no authentication. Keep it on your own machine or LAN.
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+PYTHONPATH=backend uvicorn hypergrok.main:create_app --factory --host 0.0.0.0 --port 8000
+```
+
+Desk UI, from `frontend/`:
+
+```bash
+npm install
+npm run dev -- --host 0.0.0.0
+```
+
+On an iPhone on the same Wi-Fi, open `http://<computer-lan-ip>:5173`. The Vite dev server proxies `/api` to `127.0.0.1:8000` on the computer, so the phone reaches the UI, and the UI reaches the API on the computer. This is HTTP, not public HTTPS.
+
+Deployment prerequisites before any public host:
+
+- Merge the pull request yourself if you want `main` updated. This workspace does not merge.
+- Do not set the live-trading flags, the allowlist, or a capital cap above 0 until you accept that real orders can be sent.
+- Do not put a CDP key, a backend URL, or balances in GitHub Pages.
+- Add your own access control before using a tunnel. The API will accept kill-switch and paper-account calls from anyone who can reach it.
+
 ## Setup
 
 Python 3.11 or newer.
