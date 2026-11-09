@@ -159,6 +159,9 @@ def _app(fake: FakeCoinbase | None = None, **overrides):
         coinbase_api_private_key=SecretStr(SECRET),
         coinbase_product_allowlist="BTC-USD",
         coinbase_max_capital=Decimal("1000"),
+        fx_usd_per_chf=Decimal("1"),
+        fx_as_of=datetime.now(timezone.utc),
+        fx_source="explicit_config",
     )
     values.update(overrides)
     app = create_app(make_settings(**values))
@@ -249,6 +252,7 @@ def test_public_fx_rate_is_labelled_and_not_invented() -> None:
 
 def test_missing_and_stale_fx_reject_conversion() -> None:
     from hypergrok.risk.engine import RiskEngine
+    from hypergrok.venues.coinbase.products import SpotProduct
 
     engine = RiskEngine(make_settings(account_currency="CHF", max_fx_age_seconds=300))
     account = AccountState(
@@ -259,6 +263,19 @@ def test_missing_and_stale_fx_reject_conversion() -> None:
         open_position_count=0,
         entries_today=0,
         trading_day="2026-11-09",
+    )
+    product = SpotProduct(
+        product_id="BTC-USD",
+        quote_currency="USD",
+        base_currency="BTC",
+        quote_min_size=Decimal("1"),
+        base_min_size=Decimal("0.00000001"),
+        quote_increment=Decimal("0.01"),
+        base_increment=Decimal("0.00000001"),
+        taker_fee_rate=Decimal("0.001"),
+        maker_fee_rate=Decimal("0.0009"),
+        source="test_fixture",
+        fetched_at=NOW,
     )
 
     def intent(**extra):
@@ -278,25 +295,17 @@ def test_missing_and_stale_fx_reject_conversion() -> None:
         values.update(extra)
         return OrderIntent(**values)
 
-    missing = engine.evaluate(intent(fx_source="explicit_config", fx_as_of=None, usd_per_notional_currency=Decimal("1.13")), account, now=NOW, kill_switch_engaged=False, seen_client_order_ids=set())
+    def evaluate(order):
+        return engine.evaluate(order, account, now=NOW, kill_switch_engaged=False, seen_client_order_ids=set(), product=product)
+
+    missing = evaluate(intent(fx_source="explicit_config", fx_as_of=None, usd_per_notional_currency=Decimal("1.13")))
     assert missing.status == "REJECT"
     assert "missing_fx_rate" in missing.reasons
-    stale = engine.evaluate(
-        intent(fx_source="explicit_config", fx_as_of=NOW - timedelta(hours=2)),
-        account,
-        now=NOW,
-        kill_switch_engaged=False,
-        seen_client_order_ids=set(),
-    )
+    stale = evaluate(intent(fx_source="explicit_config", fx_as_of=NOW - timedelta(hours=2)))
     assert "stale_fx_rate" in stale.reasons
-    fresh = engine.evaluate(
-        intent(fx_source="coinbase_public_exchange_rates", fx_as_of=NOW - timedelta(seconds=30)),
-        account,
-        now=NOW,
-        kill_switch_engaged=False,
-        seen_client_order_ids=set(),
-    )
+    fresh = evaluate(intent(fx_source="coinbase_public_exchange_rates", fx_as_of=NOW - timedelta(seconds=30)))
     assert fresh.status == "PASS"
+    assert "10" not in " ".join(check.detail for check in fresh.checks if check.rule == "min_notional")
 
 
 def test_each_missing_live_condition_rejects_and_full_gate_calls_once() -> None:
@@ -360,6 +369,10 @@ def test_unknown_outcome_is_not_retried() -> None:
         coinbase_live_enabled=True,
         coinbase_max_capital=Decimal("1000"),
     )
+    now = datetime.now(timezone.utc)
+    from tests.support import explicit_fx, seed_spot_product
+
+    seed_spot_product(app.state.store, "BTC-USD", now)
     passed = app.state.orchestrator.risk_manager.run(
         OrderIntent(
             client_order_id="c9",
@@ -371,9 +384,10 @@ def test_unknown_outcome_is_not_retried() -> None:
             leverage=Decimal("1"),
             entry_price=Decimal("100"),
             stop_price=Decimal("99.5"),
-            market_data_time=datetime.now(timezone.utc),
+            market_data_time=now,
+            **explicit_fx(now),
         ),
-        now=datetime.now(timezone.utc),
+        now=now,
         case_id="case-c9",
     )
     assert passed.status == "PASS"
@@ -546,7 +560,12 @@ def test_portfolio_endpoint_and_agents_stay_rule_based(client) -> None:
         research=ResearchInput(trend="up", funding_bps=Decimal("1")),
         client_order_id="desk-btc",
     )
-    result = client.app.state.orchestrator.run(idea, now=datetime.now(timezone.utc))
+    from tests.support import explicit_fx, seed_spot_product
+
+    moment = datetime.now(timezone.utc)
+    seed_spot_product(client.app.state.store, "BTC-USD", moment)
+    idea = idea.model_copy(update={**explicit_fx(moment), "fee_bps_round_trip": Decimal("20"), "slippage_bps_round_trip": Decimal("10")})
+    result = client.app.state.orchestrator.run(idea, now=moment)
     assert result.desk.mode == "rule_based"
     assert result.market.source == "coinbase_advanced_trade"
     assert result.research.mode == "rule_based"
@@ -720,6 +739,9 @@ def test_restart_reconciles_and_does_not_resend(tmp_path) -> None:
         coinbase_max_capital=Decimal("1000"),
     )
     now = datetime.now(timezone.utc)
+    from tests.support import explicit_fx, seed_spot_product
+
+    seed_spot_product(app.state.store, "BTC-USD", now)
     passed = app.state.orchestrator.risk_manager.run(
         OrderIntent(
             client_order_id="restart-1",
@@ -732,6 +754,7 @@ def test_restart_reconciles_and_does_not_resend(tmp_path) -> None:
             entry_price=Decimal("100"),
             stop_price=Decimal("99.5"),
             market_data_time=now,
+            **explicit_fx(now),
         ),
         now=now,
         case_id="case-restart",

@@ -38,6 +38,9 @@ def _secured(**overrides):
         coinbase_max_capital=Decimal("1000"),
         account_currency="USD",
         starting_capital=Decimal("1000"),
+        fx_usd_per_chf=Decimal("1"),
+        fx_as_of=datetime.now(timezone.utc),
+        fx_source="explicit_config",
     )
     values.update(overrides)
     return create_app(make_settings(**values))
@@ -169,6 +172,9 @@ def test_p3_modified_or_stale_pass_cannot_transmit() -> None:
     app = _secured()
     app.state.coinbase._client = fake
     now = datetime.now(timezone.utc)
+    from tests.support import explicit_fx, seed_spot_product
+
+    seed_spot_product(app.state.store, "BTC-USD", now)
     intent = OrderIntent(
         client_order_id="grant-1",
         venue="coinbase",
@@ -180,6 +186,7 @@ def test_p3_modified_or_stale_pass_cannot_transmit() -> None:
         entry_price=Decimal("100"),
         stop_price=Decimal("99.5"),
         market_data_time=now,
+        **explicit_fx(now),
     )
     decision = app.state.orchestrator.risk_manager.run(intent, now=now, case_id="case-grant")
     assert decision.status == "PASS"
@@ -242,6 +249,9 @@ def test_p4_concurrent_claims_send_once(tmp_path) -> None:
     app = _secured(database_url=f"sqlite:///{database}")
     app.state.coinbase._client = fake
     now = datetime.now(timezone.utc)
+    from tests.support import explicit_fx, seed_spot_product
+
+    seed_spot_product(app.state.store, "BTC-USD", now)
     intent = OrderIntent(
         client_order_id="race-1",
         venue="coinbase",
@@ -253,6 +263,7 @@ def test_p4_concurrent_claims_send_once(tmp_path) -> None:
         entry_price=Decimal("100"),
         stop_price=Decimal("99.5"),
         market_data_time=now,
+        **explicit_fx(now),
     )
     assert app.state.orchestrator.risk_manager.run(intent, now=now, case_id="race-case").status == "PASS"
     prepared = {
@@ -289,6 +300,9 @@ def test_p4_unknown_result_is_not_resent_after_restart() -> None:
     app = _secured()
     app.state.coinbase._client = fake
     now = datetime.now(timezone.utc)
+    from tests.support import explicit_fx, seed_spot_product
+
+    seed_spot_product(app.state.store, "BTC-USD", now)
     intent = OrderIntent(
         client_order_id="unk-1",
         venue="coinbase",
@@ -300,6 +314,7 @@ def test_p4_unknown_result_is_not_resent_after_restart() -> None:
         entry_price=Decimal("100"),
         stop_price=Decimal("99.5"),
         market_data_time=now,
+        **explicit_fx(now),
     )
     assert app.state.orchestrator.risk_manager.run(intent, now=now, case_id="unk-case").status == "PASS"
     prepared = {

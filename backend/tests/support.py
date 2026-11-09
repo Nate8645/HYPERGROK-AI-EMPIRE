@@ -84,6 +84,41 @@ def fitting_idea(now: datetime | None = None, **overrides: object) -> DeskIdea:
     return DeskIdea(**values)
 
 
+def seed_spot_product(store, symbol: str, now: datetime, *, quote_currency: str | None = None) -> None:
+    """Cache one fresh product. USDC products use the verified 1 / 0.01 / 1e-8 rules."""
+
+    from hypergrok.venues.coinbase.products import SpotProduct, verified_usdc_product
+
+    base, _, quote = symbol.partition("-")
+    quote = quote_currency or quote or "USD"
+    if quote == "USDC":
+        store.cache_spot_product(verified_usdc_product(symbol, base, now, source="test_fixture"))
+        return
+    store.cache_spot_product(
+        SpotProduct(
+            product_id=symbol,
+            quote_currency=quote,
+            base_currency=base,
+            quote_min_size=Decimal("1"),
+            base_min_size=Decimal("0.00000001"),
+            quote_increment=Decimal("0.01"),
+            base_increment=Decimal("0.00000001"),
+            taker_fee_rate=Decimal("0.001"),
+            maker_fee_rate=Decimal("0.0009"),
+            source="test_fixture",
+            fetched_at=now,
+        )
+    )
+
+
+def explicit_fx(now: datetime) -> dict:
+    return {
+        "usd_per_notional_currency": Decimal("1"),
+        "fx_source": "explicit_config",
+        "fx_as_of": now,
+    }
+
+
 def sample_order(client_order_id: str = "ord-1", **overrides: object) -> dict:
     body = {
         "client_order_id": client_order_id,

@@ -107,6 +107,8 @@ class OrderIntent(BaseModel):
     usd_per_notional_currency: Dec | None = None
     fx_source: str | None = None
     fx_as_of: datetime | None = None
+    spread_rate: Dec | None = None
+    post_only: bool = False
 
     @field_validator("client_order_id")
     @classmethod

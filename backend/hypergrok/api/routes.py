@@ -224,8 +224,9 @@ def risk_config(request: Request) -> dict:
         "transmits_orders": request.app.state.coinbase.live_armed(),
         "phase": 1,
         "min_order_notional_note": (
-            "Default minimum is 10 USD, the Hyperliquid minimum order value "
-            "supplied for this desk. A CHF notional is checked only with an explicit USD rate."
+            "The 10 USD figure is the Hyperliquid minimum only. "
+            "Coinbase spot uses the cached product quote_min_size, base_min_size, and increments. "
+            "Missing or stale product data is a reject, not a default."
         ),
     }
 

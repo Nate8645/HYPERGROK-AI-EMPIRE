@@ -144,6 +144,24 @@ class DecisionLogRow(Base):
     reasons_json: Mapped[list] = mapped_column(JSON, nullable=False)
 
 
+class ProductCacheRow(Base):
+    """One Coinbase product snapshot. A missing or stale row is not replaced with a default."""
+
+    __tablename__ = "product_cache"
+
+    product_id: Mapped[str] = mapped_column(String, primary_key=True)
+    quote_currency: Mapped[str] = mapped_column(String, nullable=False)
+    base_currency: Mapped[str] = mapped_column(String, nullable=False)
+    quote_min_size: Mapped[str] = mapped_column(String, nullable=False)
+    base_min_size: Mapped[str] = mapped_column(String, nullable=False)
+    quote_increment: Mapped[str] = mapped_column(String, nullable=False)
+    base_increment: Mapped[str] = mapped_column(String, nullable=False)
+    taker_fee_rate: Mapped[str] = mapped_column(String, nullable=False)
+    maker_fee_rate: Mapped[str] = mapped_column(String, nullable=False)
+    source: Mapped[str] = mapped_column(String, nullable=False)
+    fetched_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
 class CandleCacheRow(Base):
     __tablename__ = "candle_cache"
 

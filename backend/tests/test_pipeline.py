@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from hypergrok.domain import MarketSnapshot, ResearchInput
 from hypergrok.pipeline import run_preview_pipeline
-from tests.support import fitting_idea, make_settings
+from tests.support import explicit_fx, fitting_idea, make_settings, seed_spot_product
 from hypergrok.main import create_app
 
 
@@ -27,7 +27,16 @@ def _candles(now: datetime, fresh: bool) -> list[dict]:
 
 def test_pipeline_preview_does_not_transmit_and_logs_decisions(app) -> None:
     now = datetime.now(timezone.utc)
-    idea = fitting_idea(now, symbol="BTC-USD", venue="coinbase", research=ResearchInput(trend="up", funding_bps=Decimal("1")))
+    seed_spot_product(app.state.store, "BTC-USD", now)
+    idea = fitting_idea(
+        now,
+        symbol="BTC-USD",
+        venue="coinbase",
+        research=ResearchInput(trend="up", funding_bps=Decimal("1")),
+        fee_bps_round_trip=Decimal("20"),
+        slippage_bps_round_trip=Decimal("10"),
+        **explicit_fx(now),
+    )
     idea = idea.model_copy(
         update={
             "request_live": True,

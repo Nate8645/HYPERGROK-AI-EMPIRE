@@ -241,6 +241,7 @@ class CoinbaseService:
                 prepared = {**order, **prepare_order_sizes(product, order)}
                 summary = self.fees()
                 fee_bps = summary["fee_bps_round_trip"]
+                self._cache_product(product, summary, moment)
             except CoinbaseFailure as exc:
                 self._journal("order_rejected", exc.message, {"code": exc.code}, symbol=str(order.get("product_id") or "-"))
                 raise
@@ -444,6 +445,24 @@ class CoinbaseService:
             return {"attempted": True, "cancelled": [], "reason": code}
         self._journal("cancel", "cancelled open Coinbase spot orders", result, symbol="-")
         return {"attempted": True, **result}
+
+    def _cache_product(self, product: dict, summary: dict, now: datetime) -> None:
+        if self.store is None:
+            return
+        from decimal import Decimal
+
+        from hypergrok.venues.coinbase.products import spot_product_from_payload
+
+        snapshot = spot_product_from_payload(
+            product,
+            fetched_at=now,
+            taker_fee_rate=Decimal(str(summary["taker_fee_rate"])),
+            maker_fee_rate=Decimal(str(summary["maker_fee_rate"])),
+            source=str(product.get("source") or "coinbase_advanced_trade"),
+        )
+        if snapshot is None:
+            return
+        self.store.cache_spot_product(snapshot)
 
     def _intent(self, prepared: dict, product: dict | None, fee_bps, slip_bps, now: datetime) -> OrderIntent:
         quote = Decimal(str(prepared.get("quote_size") or prepared.get("notional") or "0"))

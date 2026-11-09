@@ -213,6 +213,9 @@ def test_duplicate_unknown_permissions_risk_kill_and_unauthorized() -> None:
     from hypergrok.domain import OrderIntent
 
     moment = datetime.now(timezone.utc)
+    from tests.support import seed_spot_product
+
+    seed_spot_product(fresh_app.state.store, "BTC-USDC", moment)
     RiskManager(fresh_app.state.risk_service).run(
         OrderIntent(
             client_order_id="unknown-usdc",
@@ -248,6 +251,7 @@ def test_limit_post_only_and_team_preview_does_not_submit() -> None:
     _funded(fake, btc="0.5")
     app = _app(fake, account_currency="USD", starting_capital=Decimal("1000"), coinbase_product_allowlist="BTC-USD")
     fake.product = FakeCoinbase().product
+    fake.summary = {"fee_tier": {"pricing_tier": "Intro", "maker_fee_rate": "0.0009", "taker_fee_rate": "0.001"}}
     with authed(app) as client:
         fake.accounts["accounts"].append(
             {"available_balance": {"value": "1000", "currency": "USD"}, "hold": {"value": "0", "currency": "USD"}}
@@ -280,6 +284,11 @@ def test_limit_post_only_and_team_preview_does_not_submit() -> None:
                 "size_mode": "risk_limited",
                 "client_order_id": "team-1",
                 "request_live": True,
+                "usd_per_notional_currency": "1",
+                "fx_source": "explicit_config",
+                "fx_as_of": datetime.now(timezone.utc).isoformat(),
+                "fee_bps_round_trip": "20",
+                "slippage_bps_round_trip": "10",
                 "market_snapshot": {
                     "source": "coinbase_advanced_trade",
                     "symbol": "BTC-USD",

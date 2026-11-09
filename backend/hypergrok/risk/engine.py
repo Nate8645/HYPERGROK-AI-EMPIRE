@@ -106,6 +106,7 @@ class RiskEngine:
         now: datetime,
         kill_switch_engaged: bool,
         seen_client_order_ids: set[str] | frozenset[str],
+        product=None,
     ) -> RiskDecision:
         checks: list[CheckResult] = []
 
@@ -176,7 +177,7 @@ class RiskEngine:
                 summary_prefix="reduce order; entry limits were not applied",
             )
 
-        breakdown = self._add_entry_checks(add, order, account, now)
+        breakdown = self._add_entry_checks(add, order, account, now, product)
         return self._finish(order, account, checks, breakdown=breakdown)
 
     def _add_market_data_checks(self, add, market_data_time: datetime | None, now: datetime) -> None:
@@ -193,25 +194,31 @@ class RiskEngine:
         else:
             add("stale_market_data", True, f"age {age:.3f}s within {limit}s")
 
-    def _add_entry_checks(self, add, order: OrderIntent, account: AccountState, now: datetime) -> dict[str, Decimal | None]:
+    def _add_entry_checks(self, add, order: OrderIntent, account: AccountState, now: datetime, product=None) -> dict[str, Decimal | None]:
         settings = self.settings
         fee_bps, slip_bps = self.assumed_bps(order.fee_bps_round_trip, order.slippage_bps_round_trip)
-        fee_loss = order.notional * fee_bps / BPS
-        slip_loss = order.notional * slip_bps / BPS
+        notional = order.notional
+        if order.venue == "coinbase":
+            notional, fee_bps = self._apply_coinbase_product(add, order, product, now, fee_bps)
+        else:
+            self._add_min_notional(add, order, now)
+        fee_loss = notional * fee_bps / BPS
+        slip_loss = notional * slip_bps / BPS
+        spread_rate = order.spread_rate or ZERO
+        spread_loss = notional * spread_rate
         assert order.stop_price is not None
         if order.side == "buy":
             distance = order.entry_price - order.stop_price
         else:
             distance = order.stop_price - order.entry_price
         stop_fraction = distance / order.entry_price
-        price_loss = order.notional * stop_fraction
-        planned = price_loss + fee_loss + slip_loss
+        price_loss = notional * stop_fraction
+        planned = price_loss + fee_loss + slip_loss + spread_loss
         risk_limit = account.equity * settings.max_planned_risk_fraction
-        cash = order.notional + fee_loss + slip_loss
+        cash = notional + fee_loss + slip_loss
         free_after = account.equity - cash
         reserve_required = account.equity * settings.hyperliquid_reserve_fraction
 
-        self._add_min_notional(add, order, now)
         loss_limit = account.start_of_day_equity * settings.max_daily_loss_fraction
         daily_ok = account.realized_pnl_today > -loss_limit
         add(
@@ -256,7 +263,7 @@ class RiskEngine:
             planned <= risk_limit,
             (
                 f"planned loss {planned} versus limit {risk_limit} "
-                f"(price {price_loss} + fees {fee_loss} + slippage {slip_loss})"
+                f"(price {price_loss} + fees {fee_loss} + slippage {slip_loss} + spread {spread_loss})"
             ),
         )
         return {
@@ -270,6 +277,91 @@ class RiskEngine:
             "reserve_required": reserve_required if order.venue == "hyperliquid" else None,
             "free_collateral_after": free_after,
         }
+
+    def _apply_coinbase_product(self, add, order: OrderIntent, product, now: datetime, fee_bps: Decimal) -> tuple[Decimal, Decimal]:
+        """Use the cached product. A missing or stale snapshot does not fall back to 10 USD."""
+
+        from hypergrok.money import floor_to_increment
+
+        if product is None or str(product.product_id).upper() != order.symbol.upper():
+            add("missing_product_data", False, "no cached product for this symbol; a fixed 10 USD minimum is not applied")
+            add("min_notional", False, "product minimum is unavailable")
+            add("min_base_size", False, "base minimum is unavailable")
+            return order.notional, fee_bps
+        age = (ensure_utc(now) - ensure_utc(product.fetched_at)).total_seconds()
+        limit = self.settings.max_product_metadata_age_seconds
+        if age > limit or age < -2:
+            add("stale_product_data", False, f"product age {age:.3f}s exceeds {limit}s; stale product data was not used")
+            add("min_notional", False, "stale product data was not used")
+            add("min_base_size", False, "stale product data was not used")
+            return order.notional, fee_bps
+        required = (
+            product.quote_min_size,
+            product.base_min_size,
+            product.quote_increment,
+            product.base_increment,
+            product.taker_fee_rate,
+            product.maker_fee_rate,
+        )
+        if any(value is None or value <= 0 for value in required):
+            add("missing_product_data", False, "product minimums or the fee tier are incomplete")
+            add("min_notional", False, "incomplete product data was not replaced with a default")
+            add("min_base_size", False, "incomplete product data was not replaced with a default")
+            return order.notional, fee_bps
+        add("missing_product_data", True, f"cached product from {product.source}")
+        add("stale_product_data", True, f"age {age:.3f}s within {limit}s")
+        quote = str(product.quote_currency).upper()
+        if quote != "USDC":
+            if not self._verified_fx(add, order, now):
+                add("min_notional", False, f"quote {quote} is not USDC and no verified rate was used")
+                add("min_base_size", False, "quote currency was not verified")
+                return order.notional, fee_bps
+        else:
+            add("quote_currency", True, "quote currency is USDC")
+        floored = floor_to_increment(order.notional, product.quote_increment)
+        add(
+            "quote_increment",
+            True,
+            f"requested {order.notional} floored to {floored} at increment {product.quote_increment}",
+        )
+        comparable = floored
+        compared_as = quote
+        if quote != order.notional_currency:
+            if quote == "USD" and order.usd_per_notional_currency and order.usd_per_notional_currency > 0:
+                comparable = floored * order.usd_per_notional_currency
+                compared_as = "USD"
+            else:
+                add("min_notional", False, "the product quote and the order currency do not match and cannot be converted")
+                add("min_base_size", False, "size was not checked against a converted minimum")
+                return order.notional, fee_bps
+        add(
+            "min_notional",
+            floored > 0 and comparable >= product.quote_min_size,
+            f"{comparable} {compared_as} versus product minimum {product.quote_min_size} {quote}",
+        )
+        base = floor_to_increment(floored / order.entry_price, product.base_increment) if order.entry_price > 0 else ZERO
+        add(
+            "min_base_size",
+            base >= product.base_min_size and base > 0,
+            f"base {base} versus product minimum {product.base_min_size}",
+        )
+        per_side = product.maker_fee_rate if order.post_only else product.taker_fee_rate
+        tier_bps = per_side * Decimal("2") * BPS
+        return floored, max(fee_bps, tier_bps)
+
+    def _verified_fx(self, add, order: OrderIntent, now: datetime) -> bool:
+        rate = order.usd_per_notional_currency
+        allowed = {"coinbase_public_exchange_rates", "explicit_config"}
+        if rate is None or rate <= 0 or order.fx_source not in allowed or order.fx_as_of is None:
+            add("missing_fx_rate", False, "a non-USDC quote needs a documented FX source and a timestamp")
+            return False
+        age = (ensure_utc(now) - ensure_utc(order.fx_as_of)).total_seconds()
+        if age > self.settings.max_fx_age_seconds or age < -2:
+            add("stale_fx_rate", False, f"fx age {age:.3f}s exceeds {self.settings.max_fx_age_seconds}s")
+            return False
+        add("missing_fx_rate", True, f"verified rate from {order.fx_source}")
+        add("stale_fx_rate", True, f"fx age {age:.3f}s")
+        return True
 
     def _add_min_notional(self, add, order: OrderIntent, now: datetime) -> None:
         minimum = self.settings.min_order_notional

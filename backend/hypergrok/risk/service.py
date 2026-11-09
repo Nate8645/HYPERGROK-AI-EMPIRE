@@ -59,12 +59,14 @@ class RiskService:
                 seen.add(order.client_order_id)
             account = self._account_in_session(session, now)
             kill = self._kill_in_session(session)
+            product = self.store.get_spot_product(order.symbol) if order.venue == "coinbase" else None
             decision = self.engine.evaluate(
                 order,
                 account,
                 now=now,
                 kill_switch_engaged=kill,
                 seen_client_order_ids=seen,
+                product=product,
             )
             if not already:
                 self.store.insert_client_order(

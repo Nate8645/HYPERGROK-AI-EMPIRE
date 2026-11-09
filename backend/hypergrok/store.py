@@ -28,6 +28,7 @@ from hypergrok.models import (
     JournalRow,
     KillSwitchRow,
     PaperAccountRow,
+    ProductCacheRow,
     RiskDecisionRow,
     RiskGrantRow,
 )
@@ -571,6 +572,66 @@ class DeskStore:
             session.commit()
             session.refresh(row)
             return int(row.id)
+        finally:
+            session.close()
+
+    def cache_spot_product(self, product) -> None:
+        from hypergrok.venues.coinbase.products import SpotProduct
+
+        if not isinstance(product, SpotProduct):
+            raise TypeError("cache_spot_product requires a SpotProduct")
+        session = self._session()
+        try:
+            row = session.get(ProductCacheRow, product.product_id)
+            values = {
+                "quote_currency": product.quote_currency,
+                "base_currency": product.base_currency,
+                "quote_min_size": format_decimal(product.quote_min_size),
+                "base_min_size": format_decimal(product.base_min_size),
+                "quote_increment": format_decimal(product.quote_increment),
+                "base_increment": format_decimal(product.base_increment),
+                "taker_fee_rate": format_decimal(product.taker_fee_rate),
+                "maker_fee_rate": format_decimal(product.maker_fee_rate),
+                "source": product.source,
+                "fetched_at": isoformat(product.fetched_at),
+            }
+            if row is None:
+                session.add(ProductCacheRow(product_id=product.product_id, **values))
+            else:
+                for key, value in values.items():
+                    setattr(row, key, value)
+            session.commit()
+        finally:
+            session.close()
+
+    def get_spot_product(self, product_id: str):
+        from datetime import datetime
+
+        from hypergrok.clock import ensure_utc
+        from hypergrok.venues.coinbase.products import SpotProduct
+
+        session = self._session()
+        try:
+            row = session.get(ProductCacheRow, product_id.upper())
+            if row is None:
+                return None
+            try:
+                fetched = ensure_utc(datetime.fromisoformat(row.fetched_at))
+                return SpotProduct(
+                    product_id=row.product_id,
+                    quote_currency=row.quote_currency,
+                    base_currency=row.base_currency,
+                    quote_min_size=Decimal(row.quote_min_size),
+                    base_min_size=Decimal(row.base_min_size),
+                    quote_increment=Decimal(row.quote_increment),
+                    base_increment=Decimal(row.base_increment),
+                    taker_fee_rate=Decimal(row.taker_fee_rate),
+                    maker_fee_rate=Decimal(row.maker_fee_rate),
+                    source=row.source,
+                    fetched_at=fetched,
+                )
+            except (ValueError, ArithmeticError):
+                return None
         finally:
             session.close()
 

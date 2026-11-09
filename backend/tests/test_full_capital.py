@@ -221,6 +221,10 @@ def test_final_seven_agent_preview_does_not_submit() -> None:
     fake = FakeCoinbase()
     app = _app(fake, account_currency="USD", starting_capital=Decimal("1000"))
     with authed(app) as client:
+        from tests.support import explicit_fx, seed_spot_product
+
+        moment = datetime.now(timezone.utc)
+        seed_spot_product(app.state.store, "BTC-USD", moment)
         body = client.post(
             "/api/desk/team",
             json={
@@ -233,10 +237,13 @@ def test_final_seven_agent_preview_does_not_submit() -> None:
                 "request_live": True,
                 "fee_bps_round_trip": "20",
                 "slippage_bps_round_trip": "10",
+                "usd_per_notional_currency": "1",
+                "fx_source": "explicit_config",
+                "fx_as_of": moment.isoformat(),
                 "market_snapshot": {
                     "source": "coinbase_advanced_trade",
                     "symbol": "BTC-USD",
-                    "fetched_at": datetime.now(timezone.utc).isoformat(),
+                    "fetched_at": moment.isoformat(),
                     "raw_type": "product_book",
                     "mid": "65000",
                     "bid": "64990",
@@ -262,10 +269,13 @@ def test_final_seven_agent_preview_does_not_submit() -> None:
                 request_live=True,
                 fee_bps_round_trip=Decimal("20"),
                 slippage_bps_round_trip=Decimal("10"),
+                usd_per_notional_currency=Decimal("1"),
+                fx_source="explicit_config",
+                fx_as_of=moment,
                 market_snapshot=MarketSnapshot(
                     source="coinbase_advanced_trade",
                     symbol="BTC-USD",
-                    fetched_at=datetime.now(timezone.utc),
+                    fetched_at=moment,
                     raw_type="product_book",
                     mid=Decimal("65000"),
                     bid=Decimal("64990"),

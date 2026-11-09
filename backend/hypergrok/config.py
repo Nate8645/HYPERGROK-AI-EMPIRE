@@ -103,6 +103,10 @@ class Settings(BaseSettings):
         default=300.0,
         validation_alias=AliasChoices("HYPERGROK_MAX_FX_AGE_SECONDS"),
     )
+    max_product_metadata_age_seconds: float = Field(
+        default=300.0,
+        validation_alias=AliasChoices("HYPERGROK_MAX_PRODUCT_METADATA_AGE_SECONDS"),
+    )
     autonomous_enabled: bool = Field(
         default=False,
         validation_alias=AliasChoices("HYPERGROK_AUTONOMOUS_ENABLED", "AUTONOMOUS_ENABLED"),
@@ -190,6 +194,8 @@ class Settings(BaseSettings):
             raise ValueError("hyperliquid_info_timeout_seconds must be positive")
         if self.max_fx_age_seconds <= 0:
             raise ValueError("max_fx_age_seconds must be positive")
+        if self.max_product_metadata_age_seconds <= 0:
+            raise ValueError("max_product_metadata_age_seconds must be positive")
         if self.coinbase_max_capital < 0:
             raise ValueError("coinbase_max_capital cannot be negative")
         if not (Decimal("0") < self.simulation_max_capital_fraction <= Decimal("1")):

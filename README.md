@@ -74,7 +74,7 @@ Defaults, overridable by environment except leverage, which is fixed at 1:
 | Open positions | 1 |
 | New entries per day | 2 |
 | Hyperliquid reserve | at least 20% of equity left as free collateral after notional, fees, and slippage |
-| Minimum notional | 10 USD, the Hyperliquid minimum order value given for this desk |
+| Minimum notional | 10 USD on Hyperliquid. Coinbase spot uses each product's own minimum and increments |
 | Stale data | older than 5 seconds, or a timestamp more than 2 seconds in the future |
 | Duplicate protection | a client order id is consumed on first sight |
 | Kill switch | persisted in SQLite; blocks every new order, including reduces, while engaged |

@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 
 from hypergrok.main import create_app
 from hypergrok.trial import run_simulated_trial
+from hypergrok.venues.coinbase.products import verified_usdc_product
 from tests.support import login, make_settings
 
 NOW = datetime(2026, 11, 9, 21, 35, tzinfo=timezone.utc)
@@ -25,6 +26,7 @@ def _books() -> dict:
 def test_simulated_trial_steps_down_and_blocks_the_kill_switch() -> None:
     report = run_simulated_trial(
         books=_books(),
+        products={"BTC-USDC": verified_usdc_product("BTC-USDC", "BTC", NOW, source="verified_fixture")},
         research_trends={"BTC-USDC": "down"},
         as_of=NOW,
         balance_source="fixture: labeled test balance, not a live order",
@@ -43,8 +45,10 @@ def test_simulated_trial_steps_down_and_blocks_the_kill_switch() -> None:
     full = next(row for row in report["size_ladder"] if row["fraction"] == "1")
     assert full["fits_one_percent"] is False
     largest = Decimal(report["largest_size_within_one_percent"])
-    assert largest < Decimal("10")
+    assert largest >= Decimal("1")
     assert largest < Decimal(full["notional"])
+    assert "10 USD" not in " ".join(report["decision_reasons"])
+    assert "not a buy signal" in " ".join(report["decision_reasons"])
     assert report["mock_buy"]["transmitted"] is False
     assert report["mock_sell"]["transmitted"] is False
     assert report["mock_buy"]["label"] == "SIMULATED"

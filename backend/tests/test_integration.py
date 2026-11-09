@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from hypergrok.domain import MarketSnapshot, ResearchInput
 from hypergrok.pipeline import run_preview_pipeline
-from tests.support import fitting_idea
+from tests.support import explicit_fx, fitting_idea, seed_spot_product
 
 
 def test_health_agents_desk_and_pipeline_share_one_database(client) -> None:
@@ -25,6 +25,8 @@ def test_health_agents_desk_and_pipeline_share_one_database(client) -> None:
     assert "private" not in status
 
     now = datetime.now(timezone.utc)
+    seed_spot_product(client.app.state.store, "BTC-USD", now)
+    seed_spot_product(client.app.state.store, "ETH-USD", now)
     idea_body = {
         "symbol": "BTC-USD",
         "venue": "coinbase",
@@ -33,6 +35,11 @@ def test_health_agents_desk_and_pipeline_share_one_database(client) -> None:
         "size_mode": "risk_limited",
         "client_order_id": "integration-1",
         "request_live": True,
+        "usd_per_notional_currency": "1",
+        "fx_source": "explicit_config",
+        "fx_as_of": now.isoformat(),
+        "fee_bps_round_trip": "20",
+        "slippage_bps_round_trip": "10",
         "market_snapshot": {
             "source": "coinbase_advanced_trade",
             "symbol": "BTC-USD",
@@ -74,6 +81,9 @@ def test_health_agents_desk_and_pipeline_share_one_database(client) -> None:
             venue="coinbase",
             client_order_id="integration-preview",
             research=ResearchInput(trend="up", funding_bps=Decimal("1")),
+            **explicit_fx(now),
+            fee_bps_round_trip=Decimal("20"),
+            slippage_bps_round_trip=Decimal("10"),
             market_snapshot=MarketSnapshot(
                 source="coinbase_advanced_trade",
                 symbol="ETH-USD",

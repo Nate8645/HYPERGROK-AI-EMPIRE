@@ -15,8 +15,9 @@ from hypergrok.config import Settings
 from hypergrok.domain import AccountUpdate, DeskIdea, MarketSnapshot, OrderIntent, ResearchInput
 from hypergrok.execution.dry_run import DryRunAdapter
 from hypergrok.main import create_app
-from hypergrok.money import floor_money, format_decimal
+from hypergrok.money import floor_money, floor_to_increment, format_decimal
 from hypergrok.venues.coinbase.credentials import load_credentials
+from hypergrok.venues.coinbase.products import SpotProduct
 
 FIXTURE_AVAILABLE_USDC = Decimal("10.896768")
 STOP = Decimal("0.05")
@@ -38,6 +39,7 @@ AGENT_ORDER = (
 def run_simulated_trial(
     *,
     books: dict,
+    products: dict[str, SpotProduct],
     research_trends: dict[str, str],
     as_of: datetime,
     balance: Decimal = FIXTURE_AVAILABLE_USDC,
@@ -61,6 +63,8 @@ def run_simulated_trial(
         coinbase_max_capital=Decimal("0"),
     )
     app = create_app(settings)
+    for product in products.values():
+        app.state.store.cache_spot_product(product)
     app.state.store.update_account(
         AccountUpdate(currency="USDC", equity=balance, start_of_day_equity=balance),
         moment,
@@ -93,18 +97,19 @@ def run_simulated_trial(
     full = next(row for row in ladder if row["fraction"] == "1")
     fitting = [row for row in ladder if row["fits_one_percent"]]
     largest = max(fitting, key=lambda row: Decimal(row["notional"]), default=None)
-    below_minimum = largest is not None and Decimal(largest["notional"]) < settings.min_order_notional
+    primary = next(iter(products.values()))
+    quote_min = primary.quote_min_size
+    below_minimum = largest is not None and Decimal(largest["notional"]) < quote_min
     reasons = []
     if not full["fits_one_percent"]:
         reasons.append("100 percent of the balance violates the 1 percent planned-loss budget")
     if largest is None:
         reasons.append("no smaller size fits the 1 percent planned-loss budget")
     elif below_minimum:
-        reasons.append(
-            "the largest size inside the 1 percent budget is below the 10 USD minimum and no FX quote was supplied"
-        )
+        reasons.append("the largest size inside the 1 percent budget is below the product quote minimum")
     if screen_outcome != "TRADE":
         reasons.append("no intraday strategy met the robust-screen rule")
+        reasons.append("a size that clears the product minimum is not a buy signal")
     decision = "NO TRADE"
 
     mocks = _mock_round_trip(books)
@@ -146,9 +151,17 @@ def run_simulated_trial(
         "cases": cases,
         "proposal": {
             "stop_fraction": format_decimal(STOP),
+            "desk_default_stop_fraction": format_decimal(settings.default_stop_fraction),
             "fee_bps_round_trip": format_decimal(FEE_BPS),
             "slippage_bps_round_trip": format_decimal(SLIPPAGE_BPS),
+            "taker_fee_rate": format_decimal(primary.taker_fee_rate),
+            "maker_fee_rate": format_decimal(primary.maker_fee_rate),
+            "quote_min_size": format_decimal(primary.quote_min_size),
+            "quote_increment": format_decimal(primary.quote_increment),
+            "base_min_size": format_decimal(primary.base_min_size),
+            "base_increment": format_decimal(primary.base_increment),
             "loss_scenarios": _scenarios(balance),
+            "capital_math": _capital_math(balance, books, primary, settings.default_stop_fraction),
         },
         "size_ladder": ladder,
         "largest_size_within_one_percent": None if largest is None else largest["notional"],
@@ -249,8 +262,9 @@ def _agent_entry(name: str, events: list[dict], result) -> dict:
 def _size_ladder(app, books: dict, moment: datetime, balance: Decimal) -> list[dict]:
     product = next(iter(books))
     rows = []
+    fee_rate = FEE_BPS / Decimal("10000")
     for fraction in FRACTIONS:
-        notional = floor_money(balance * fraction)
+        notional = floor_to_increment(balance * fraction / (Decimal("1") + fee_rate), QUOTE_INCREMENT)
         rows.append(_evaluate_size(app, books, moment, notional, f"fraction-{fraction}"))
         rows[-1]["fraction"] = format_decimal(fraction)
     bounds = app.state.risk_engine.sizing_bounds(
@@ -286,6 +300,7 @@ def _evaluate_size(app, books: dict, moment: datetime, notional: Decimal, tag: s
         market_data_time=moment,
         fee_bps_round_trip=FEE_BPS,
         slippage_bps_round_trip=SLIPPAGE_BPS,
+        spread_rate=_spread(book),
     )
     decision = app.state.orchestrator.risk_manager.run(order, now=moment, case_id=f"sim-{tag}")
     planned_ok = any(check.rule == "planned_risk" and check.passed for check in decision.checks)
@@ -301,6 +316,74 @@ def _evaluate_size(app, books: dict, moment: datetime, notional: Decimal, tag: s
         "label": "SIMULATED",
         "transmitted": False,
     }
+
+
+def _spread(book: dict) -> Decimal:
+    bid = Decimal(book["best_bid"])
+    ask = Decimal(book["best_ask"])
+    mid = (bid + ask) / Decimal("2")
+    if mid <= 0:
+        return Decimal("0")
+    return (ask - bid) / mid
+
+
+def _capital_math(balance: Decimal, books: dict, product: SpotProduct, desk_stop: Decimal) -> dict:
+    risk_budget = balance * Decimal("0.01")
+    daily_budget = balance * Decimal("0.03")
+    fee = product.taker_fee_rate * Decimal("2")
+    slip = SLIPPAGE_BPS / Decimal("10000")
+    book = books[product.product_id]
+    spread = _spread(book)
+    rows = []
+    for fraction in FRACTIONS:
+        notional = floor_to_increment(balance * fraction / (Decimal("1") + fee), product.quote_increment)
+        planned_screen = notional * (STOP + fee + slip + spread)
+        planned_desk = notional * (desk_stop + fee + slip + spread)
+        rows.append(
+            {
+                "fraction": format_decimal(fraction),
+                "notional": format_decimal(notional),
+                "quote_min_ok": notional >= product.quote_min_size,
+                "planned_loss_at_5pct_stop": format_decimal(planned_screen),
+                "fits_one_percent": planned_screen <= risk_budget and notional >= product.quote_min_size,
+                "planned_loss_at_desk_stop": format_decimal(planned_desk),
+                "fits_one_percent_at_desk_stop": planned_desk <= risk_budget and notional >= product.quote_min_size,
+                "fits_three_percent_daily": planned_screen <= daily_budget,
+            }
+        )
+    return {
+        "balance": format_decimal(balance),
+        "one_percent_budget": format_decimal(risk_budget),
+        "three_percent_daily_budget": format_decimal(daily_budget),
+        "max_entries_per_day": 2,
+        "two_entries_at_one_percent": format_decimal(risk_budget * 2),
+        "one_percent_binds_before_the_daily_limit": risk_budget * 2 <= daily_budget,
+        "screen_stop_fraction": format_decimal(STOP),
+        "desk_default_stop_fraction": format_decimal(desk_stop),
+        "taker_round_trip": format_decimal(fee),
+        "slippage_round_trip": format_decimal(slip),
+        "live_spread_rate": format_decimal(spread),
+        "largest_under_one_percent_at_5pct_stop": format_decimal(_largest_notional(risk_budget, STOP, fee, slip, spread, product)),
+        "largest_under_one_percent_at_desk_stop": format_decimal(_largest_notional(risk_budget, desk_stop, fee, slip, spread, product, balance)),
+        "fractions": rows,
+        "limits_changed": False,
+    }
+
+
+def _largest_notional(budget: Decimal, stop: Decimal, fee: Decimal, slip: Decimal, spread: Decimal, product: SpotProduct, balance: Decimal | None = None) -> Decimal:
+    rate = stop + fee + slip + spread
+    if rate <= 0:
+        return Decimal("0")
+    size = floor_to_increment(budget / rate, product.quote_increment)
+    while size > 0 and size * rate > budget:
+        size -= product.quote_increment
+    if balance is not None:
+        cash_cap = floor_to_increment(balance / (Decimal("1") + fee + slip), product.quote_increment)
+        if size > cash_cap:
+            size = cash_cap
+    if size < product.quote_min_size:
+        return Decimal("0")
+    return size
 
 
 def _scenarios(balance: Decimal) -> list[dict]:
