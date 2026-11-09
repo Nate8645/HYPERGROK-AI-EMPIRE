@@ -7,6 +7,20 @@ from hypergrok.config import Settings
 from hypergrok.domain import DeskIdea, MarketSnapshot, ResearchInput
 
 
+OPERATOR_PASSWORD = "test-operator-password"
+
+
+def auth_overrides() -> dict:
+    from hypergrok.auth import hash_password
+
+    return {
+        "auth_username": "operator",
+        "auth_password_hash": hash_password(OPERATOR_PASSWORD, salt=b"operator-salt-16b", iterations=1000),
+        "auth_rate_limit_per_minute": 100000,
+        "auth_login_limit_per_minute": 10000,
+    }
+
+
 def make_settings(**overrides: object) -> Settings:
     values: dict = {
         "database_url": "sqlite://",
@@ -16,9 +30,28 @@ def make_settings(**overrides: object) -> Settings:
         "default_fee_bps_round_trip": Decimal("10"),
         "default_slippage_bps_round_trip": Decimal("10"),
         "live_trading_enabled": False,
+        **auth_overrides(),
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)
+
+
+def login(client, username: str = "operator", password: str = OPERATOR_PASSWORD) -> None:
+    response = client.post("/api/auth/login", json={"username": username, "password": password})
+    if response.status_code != 200:
+        raise AssertionError(response.text)
+
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def authed(app):
+    from fastapi.testclient import TestClient
+
+    with TestClient(app) as client:
+        login(client)
+        yield client
 
 
 def fresh_snapshot(now: datetime | None = None) -> MarketSnapshot:

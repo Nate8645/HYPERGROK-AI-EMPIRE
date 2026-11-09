@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.support import authed
 from pydantic import SecretStr
 
 from hypergrok.config import Settings
@@ -319,7 +320,7 @@ def test_each_missing_live_condition_rejects_and_full_gate_calls_once() -> None:
         values = dict(base)
         values.update(overrides)
         app = _app(fake, **values)
-        with TestClient(app) as client:
+        with authed(app) as client:
             if reason != "missing_human_approval":
                 token = client.post("/api/approvals", json={"client_order_id": "c1", "note": "human"}).json()["token"]
             else:
@@ -331,10 +332,11 @@ def test_each_missing_live_condition_rejects_and_full_gate_calls_once() -> None:
 
     fake.calls.clear()
     app = _app(fake, **base)
-    with TestClient(app) as client:
+    with authed(app) as client:
         denied = client.post("/api/coinbase/orders", json=_order(client_order_id="c-deny", request_live=True)).json()
         assert denied["reason"] == "missing_human_approval"
-        token = client.post("/api/approvals", json={"client_order_id": "c-ok", "note": "human"}).json()["token"]
+        ok_order = _order(client_order_id="c-ok")
+        token = client.post("/api/approvals", json={"client_order_id": "c-ok", "note": "human", "order": ok_order}).json()["token"]
         accepted = client.post(
             "/api/coinbase/orders",
             json=_order(client_order_id="c-ok", request_live=True, approval_token=token),
@@ -377,7 +379,7 @@ def test_unknown_outcome_is_not_retried() -> None:
     assert passed.status == "PASS"
     fake.created = Boom(504, "gateway timeout")
     broker = app.state.coinbase.broker
-    prepared = {"client_order_id": "c9", "product_id": "BTC-USD", "side": "buy", "order_type": "market", "quote_size": "50", "base_size": None}
+    prepared = {"client_order_id": "c9", "product_id": "BTC-USD", "side": "buy", "order_type": "market", "quote_size": "50", "entry_price": "100", "stop_price": "99.5", "base_size": None}
     first = broker.submit(prepared)
     assert first["reconciled"] is True
     assert fake.calls.count("market_order") == 1
@@ -390,22 +392,21 @@ def test_permissions_invalid_key_empty_account_and_rejected_preview() -> None:
     fake = FakeCoinbase()
     fake.fail = Boom(403, "Missing required scopes")
     app = _app(fake)
-    with TestClient(app) as client:
+    with authed(app) as client:
         response = client.get("/api/coinbase/balances")
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "missing_api_permissions"
         assert SECRET not in response.text
-
-    fake.fail = Boom(401, "invalid api key")
-    response = TestClient(app).get("/api/coinbase/balances")
-    assert response.status_code == 401
-    assert response.json()["error"]["code"] == "invalid_api_key"
-    assert SECRET not in response.text
+        fake.fail = Boom(401, "invalid api key")
+        response = client.get("/api/coinbase/balances")
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "invalid_api_key"
+        assert SECRET not in response.text
 
     fake.fail = None
     fake.accounts = {"accounts": [{"available_balance": {"value": "0", "currency": "USD"}, "hold": {"value": "0", "currency": "USD"}}]}
     app = _app(fake, live_trading_enabled=True, coinbase_live_enabled=True, coinbase_max_capital=Decimal("1000"))
-    with TestClient(app) as client:
+    with authed(app) as client:
         balances = client.get("/api/coinbase/balances").json()
         assert balances["account_state"] == "empty"
         token = client.post("/api/approvals", json={"client_order_id": "empty-1"}).json()["token"]
@@ -416,7 +417,7 @@ def test_permissions_invalid_key_empty_account_and_rejected_preview() -> None:
     fake.accounts = {"accounts": [{"available_balance": {"value": "1000", "currency": "USD"}, "hold": {"value": "0", "currency": "USD"}}]}
     fake.preview = {"errs": ["PREVIEW_INVALID_SIZE"], "quote_size": "50", "commission_total": "0.1"}
     app = _app(fake, live_trading_enabled=True, coinbase_live_enabled=True, coinbase_max_capital=Decimal("1000"))
-    with TestClient(app) as client:
+    with authed(app) as client:
         token = client.post("/api/approvals", json={"client_order_id": "bad-preview"}).json()["token"]
         response = client.post(
             "/api/coinbase/orders",
@@ -430,7 +431,7 @@ def test_permissions_invalid_key_empty_account_and_rejected_preview() -> None:
 def test_risk_limit_kill_switch_and_stale_price_block_orders() -> None:
     fake = FakeCoinbase()
     app = _app(fake, live_trading_enabled=True, coinbase_live_enabled=True, coinbase_max_capital=Decimal("1000"))
-    with TestClient(app) as client:
+    with authed(app) as client:
         token = client.post("/api/approvals", json={"client_order_id": "wide"}).json()["token"]
         wide = client.post(
             "/api/coinbase/orders",
@@ -455,13 +456,13 @@ def test_risk_limit_kill_switch_and_stale_price_block_orders() -> None:
 
     fake.orders = {"orders": [{"order_id": "open-1", "product_id": "BTC-USD", "status": "OPEN", "side": "BUY", "client_order_id": "old"}]}
     app = _app(fake, live_trading_enabled=True, coinbase_live_enabled=True, coinbase_max_capital=Decimal("100"))
-    with TestClient(app) as client:
+    with authed(app) as client:
         client.post("/api/risk/kill-switch", json={"engaged": True, "reason": "halt"})
         assert fake.cancelled == ["open-1"]
 
     fake.calls.clear()
     app = _app(fake, live_trading_enabled=True, coinbase_live_enabled=True, coinbase_max_capital=Decimal("1000"))
-    with TestClient(app) as client:
+    with authed(app) as client:
         token = client.post("/api/approvals", json={"client_order_id": "stale"}).json()["token"]
         stale = client.post(
             "/api/coinbase/orders",
@@ -509,7 +510,7 @@ def test_portfolio_endpoint_reports_cost_basis() -> None:
         ]
     }
     app = _app(fake)
-    with TestClient(app) as client:
+    with authed(app) as client:
         body = client.get("/api/coinbase/portfolio").json()
         assert body["fees_included"] is True
         assert body["method"] == "average_cost"
@@ -569,7 +570,7 @@ def test_http_order_goes_through_risk_manager(monkeypatch) -> None:
     monkeypatch.setattr(RiskManager, "run", spy)
     fake = FakeCoinbase()
     app = _app(fake)
-    with TestClient(app) as client:
+    with authed(app) as client:
         body = client.post("/api/coinbase/orders", json=_order(client_order_id="via-risk")).json()
     assert body["transmitted"] is False
     assert seen == ["via-risk"]
@@ -691,8 +692,9 @@ def test_transfer_permission_refuses_to_arm() -> None:
     assert checked["reason"] == "transfer_permission"
     assert checked["can_transfer"] is True
     assert app.state.coinbase.live_armed() is False
-    with TestClient(app) as client:
-        token = client.post("/api/approvals", json={"client_order_id": "xfer"}).json()["token"]
+    with authed(app) as client:
+        xfer_order = _order(client_order_id="xfer")
+        token = client.post("/api/approvals", json={"client_order_id": "xfer", "order": xfer_order}).json()["token"]
         blocked = client.post(
             "/api/coinbase/orders",
             json=_order(client_order_id="xfer", request_live=True, approval_token=token),
@@ -741,6 +743,8 @@ def test_restart_reconciles_and_does_not_resend(tmp_path) -> None:
         "side": "buy",
         "order_type": "market",
         "quote_size": "50",
+        "entry_price": "100",
+        "stop_price": "99.5",
         "base_size": None,
     }
     first = app.state.coinbase.broker.submit(prepared)

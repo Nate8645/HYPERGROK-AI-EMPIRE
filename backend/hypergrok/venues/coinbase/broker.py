@@ -6,6 +6,7 @@ from datetime import datetime
 
 from hypergrok.clock import utcnow
 from hypergrok.agents.risk_manager import risk_passed
+from hypergrok.order_binding import fingerprint
 from hypergrok.venues.coinbase.market import (
     CoinbaseFailure,
     as_dict,
@@ -17,10 +18,11 @@ from hypergrok.venues.coinbase.market import (
 
 
 class CoinbaseBroker:
-    def __init__(self, client, *, clock=utcnow, store=None) -> None:
+    def __init__(self, client, *, clock=utcnow, store=None, recheck=None) -> None:
         self.client = client
         self.clock = clock
         self.store = store
+        self.recheck = recheck
         self._attempted: set[str] = store.dispatched_client_order_ids() if store is not None else set()
 
     def preview(self, prepared: dict) -> dict:
@@ -58,8 +60,16 @@ class CoinbaseBroker:
         client_order_id = str(prepared.get("client_order_id") or "")
         if not client_order_id:
             raise CoinbaseFailure("invalid_order", "client_order_id is required")
-        if not risk_passed(client_order_id):
+        order_hash = fingerprint(prepared)
+        grant = self.store.find_grant(client_order_id, order_hash, self.clock()) if self.store is not None else None
+        if grant is None and not risk_passed(client_order_id):
             raise CoinbaseFailure("risk_manager_required", "the risk manager has not passed this order")
+        if self.store is not None and grant is None:
+            raise CoinbaseFailure("risk_grant_mismatch", "the risk pass does not match this order")
+        if self.store is not None and self.store.get_kill_switch().engaged:
+            raise CoinbaseFailure("kill_switch", "the kill switch is engaged")
+        if self.recheck is not None and not self.recheck(prepared, None if grant is None else grant["case_id"]):
+            raise CoinbaseFailure("risk_recheck_failed", "the order failed the pre-send re-check")
         if client_order_id in self._attempted:
             found = self.reconcile(client_order_id)
             if found:
@@ -67,6 +77,12 @@ class CoinbaseBroker:
                 return found
             return {"status": "unknown", "retried": False, "reason": "already_attempted", "client_order_id": client_order_id}
         if self.store is not None:
+            if not self.store.claim_dispatch(client_order_id, self.clock()):
+                found = self.reconcile(client_order_id)
+                if found:
+                    found["retried"] = False
+                    return found
+                return {"status": "unknown", "retried": False, "reason": "already_attempted", "client_order_id": client_order_id}
             self.store.mark_order_dispatched(client_order_id, self.clock())
         self._attempted.add(client_order_id)
         try:

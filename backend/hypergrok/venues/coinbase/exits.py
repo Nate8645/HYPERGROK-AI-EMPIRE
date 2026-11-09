@@ -1,7 +1,8 @@
-"""Spot has no resting stop in this desk. A technical exit previews and asks for approval.
+"""Spot exits are monitored. A stop, take-profit, or time stop is not a guaranteed fill.
 
-The Coinbase SDK can preview a stop-limit order. This path does not call the
-create-order method. Risk Manager and the kill switch still apply.
+A gap, a stale book, a network failure, or a partial fill can leave the
+position open. This module never reports a fill as guaranteed. The Coinbase
+SDK can preview a stop-limit order. This path does not call create-order.
 """
 
 from __future__ import annotations
@@ -27,10 +28,10 @@ def assess_exit(
     max_age_seconds: float,
 ) -> dict:
     if feed_error or snapshot is None or snapshot.bid is None:
-        return {"action": "hold", "reason": "feed_outage", "order": None}
+        return {"action": "hold", "reason": "feed_outage", "order": None, "guaranteed_fill": False, "fill_state": "unknown"}
     age = (ensure_utc(now) - snapshot.observed_at()).total_seconds()
     if age > max_age_seconds or age < -2:
-        return {"action": "hold", "reason": "stale_market_data", "order": None}
+        return {"action": "hold", "reason": "stale_market_data", "order": None, "guaranteed_fill": False, "fill_state": "unknown"}
     price = snapshot.bid
     if price <= stop_price:
         reason = "stop"
@@ -39,7 +40,7 @@ def assess_exit(
     elif ensure_utc(now) >= ensure_utc(time_stop_at):
         reason = "time_stop"
     else:
-        return {"action": "hold", "reason": "no_exit", "order": None}
+        return {"action": "hold", "reason": "no_exit", "order": None, "guaranteed_fill": False, "fill_state": "unknown"}
     return {
         "action": "exit",
         "reason": reason,
@@ -54,6 +55,8 @@ def assess_exit(
             "limit_price": format(price, "f"),
             "market_data_time": snapshot.observed_at(),
         },
+        "guaranteed_fill": False,
+        "fill_state": "unknown",
     }
 
 

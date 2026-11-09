@@ -65,10 +65,13 @@ class ExecutionTrader:
             )
 
         mode = "live" if idea.request_live else "dry_run"
+        from hypergrok.order_binding import fingerprint
+
         gate = self.gate.authorize(
             mode=mode,
             client_order_id=order.client_order_id,
             approval_token=idea.approval_token,
+            order_hash=fingerprint(order.model_dump()),
             venue=order.venue,
             product_id=order.symbol if order.venue == "coinbase" else None,
             notional=order.notional,

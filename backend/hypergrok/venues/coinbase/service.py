@@ -264,10 +264,13 @@ class CoinbaseService:
                 raise
             self._journal("preview", f"preview {intent.symbol}", preview, symbol=intent.symbol)
         fx = self.fx_quote()
+        from hypergrok.order_binding import fingerprint
+
         gate = self.gate.authorize(
             mode="live" if order.get("request_live") else "dry_run",
             client_order_id=intent.client_order_id,
             approval_token=order.get("approval_token"),
+            order_hash=fingerprint(order),
             venue="coinbase",
             product_id=intent.symbol,
             notional=intent.notional,

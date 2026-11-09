@@ -36,6 +36,7 @@ class ExecutionGate:
         mode: str,
         client_order_id: str,
         approval_token: str | None,
+        order_hash: str | None = None,
         venue: str | None = None,
         product_id: str | None = None,
         notional: Decimal | None = None,
@@ -54,6 +55,15 @@ class ExecutionGate:
         record = self.store.get_approval(approval_token)
         if record is None or record["client_order_id"] != client_order_id or record["used_at"] is not None:
             return GateDecision(allowed=False, reason="missing_human_approval", mode="live")
+        expires_at = record.get("expires_at") or ""
+        if expires_at:
+            from datetime import datetime
+
+            from hypergrok.clock import ensure_utc, utcnow
+
+            expiry = ensure_utc(datetime.fromisoformat(expires_at))
+            if expiry <= ensure_utc(now or utcnow()):
+                return GateDecision(allowed=False, reason="approval_expired", mode="live")
         if (venue or "").lower() != "coinbase":
             return GateDecision(
                 allowed=False,
@@ -61,13 +71,22 @@ class ExecutionGate:
                 mode="live",
                 approval_consumed=False,
             )
-        return self._authorize_coinbase(
+        decision = self._authorize_coinbase(
             product_id=product_id,
             notional=notional,
             notional_currency=notional_currency,
             fx_quote=fx_quote,
             now=now,
         )
+        if not decision.allowed:
+            return decision
+        if not record.get("order_hash") or record.get("order_hash") != (order_hash or ""):
+            return GateDecision(allowed=False, reason="approval_mismatch", mode="live")
+        from hypergrok.clock import utcnow
+
+        if not self.store.mark_approval_used(approval_token, now or utcnow()):
+            return GateDecision(allowed=False, reason="missing_human_approval", mode="live")
+        return GateDecision(True, "coinbase_live", "live", approval_consumed=True)
 
     def _authorize_coinbase(
         self,

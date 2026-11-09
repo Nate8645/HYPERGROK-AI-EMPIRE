@@ -6,7 +6,7 @@ import secrets
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import select, text
+from sqlalchemy import select, text, update
 from sqlalchemy.orm import Session, sessionmaker
 
 from hypergrok.clock import ensure_utc, isoformat, utcnow
@@ -21,12 +21,15 @@ from hypergrok.models import (
     DecisionLogRow,
     AgentEventRow,
     ApprovalRow,
+    AuditLogRow,
     ClientOrderRow,
+    DispatchClaimRow,
     ExecutionAttemptRow,
     JournalRow,
     KillSwitchRow,
     PaperAccountRow,
     RiskDecisionRow,
+    RiskGrantRow,
 )
 from hypergrok.money import format_decimal
 from hypergrok.serialize import to_jsonable
@@ -366,7 +369,16 @@ class DeskStore:
         finally:
             session.close()
 
-    def create_approval(self, *, client_order_id: str, note: str, now: datetime) -> dict:
+    def create_approval(
+        self,
+        *,
+        client_order_id: str,
+        note: str,
+        now: datetime,
+        order_hash: str = "",
+        expires_at: datetime | None = None,
+        created_by: str = "",
+    ) -> dict:
         token = secrets.token_urlsafe(32)
         session = self._session()
         try:
@@ -377,13 +389,27 @@ class DeskStore:
                     note=note[:500],
                     created_at=isoformat(now),
                     used_at=None,
+                    order_hash=order_hash,
+                    expires_at="" if expires_at is None else isoformat(expires_at),
+                    created_by=created_by[:80],
                 )
             )
             session.commit()
+            self.append_audit(
+                actor=created_by or "unknown",
+                role="operator",
+                action="approval_created",
+                path="/api/approvals",
+                outcome="allowed",
+                detail=client_order_id,
+                now=now,
+            )
             return {
                 "client_order_id": client_order_id,
                 "token": token,
                 "created_at": isoformat(now),
+                "expires_at": "" if expires_at is None else isoformat(expires_at),
+                "order_hash": order_hash,
                 "note": note[:500],
             }
         finally:
@@ -406,13 +432,28 @@ class DeskStore:
         finally:
             session.close()
 
-    def mark_approval_used(self, token: str, now: datetime) -> None:
+    def mark_approval_used(self, token: str, now: datetime) -> bool:
+        """Consume a token once. A second caller in another process gets False."""
         session = self._session()
         try:
-            row = session.get(ApprovalRow, token)
-            if row is not None and row.used_at is None:
-                row.used_at = isoformat(now)
-                session.commit()
+            result = session.execute(
+                update(ApprovalRow)
+                .where(ApprovalRow.token == token, ApprovalRow.used_at.is_(None))
+                .values(used_at=isoformat(now))
+            )
+            session.commit()
+            consumed = int(result.rowcount or 0) == 1
+            if consumed:
+                self.append_audit(
+                    actor="gate",
+                    role="operator",
+                    action="approval_consumed",
+                    path="/api/coinbase/orders",
+                    outcome="allowed",
+                    detail="single_use",
+                    now=now,
+                )
+            return consumed
         finally:
             session.close()
 
@@ -426,6 +467,8 @@ class DeskStore:
                 "token": row.token,
                 "client_order_id": row.client_order_id,
                 "used_at": row.used_at,
+                "order_hash": row.order_hash,
+                "expires_at": row.expires_at,
             }
         finally:
             session.close()
@@ -553,6 +596,121 @@ class DeskStore:
                 select(ExecutionAttemptRow.client_order_id).where(ExecutionAttemptRow.status == "dispatch_started")
             ).all()
             return set(rows)
+        finally:
+            session.close()
+
+    def insert_grant(
+        self,
+        *,
+        decision_id: str,
+        order_hash: str,
+        client_order_id: str,
+        case_id: str,
+        now: datetime,
+        expires_at: datetime,
+    ) -> None:
+        session = self._session()
+        try:
+            session.add(
+                RiskGrantRow(
+                    decision_id=decision_id,
+                    order_hash=order_hash,
+                    client_order_id=client_order_id,
+                    case_id=case_id,
+                    created_at=isoformat(now),
+                    expires_at=isoformat(expires_at),
+                )
+            )
+            session.commit()
+        finally:
+            session.close()
+
+    def find_grant(self, client_order_id: str, order_hash: str, now: datetime) -> dict | None:
+        session = self._session()
+        try:
+            rows = session.scalars(
+                select(RiskGrantRow)
+                .where(RiskGrantRow.client_order_id == client_order_id, RiskGrantRow.order_hash == order_hash)
+                .order_by(RiskGrantRow.created_at.desc())
+            ).all()
+            current = ensure_utc(now).isoformat()
+            for row in rows:
+                if row.expires_at > current:
+                    return {
+                        "decision_id": row.decision_id,
+                        "order_hash": row.order_hash,
+                        "case_id": row.case_id,
+                        "expires_at": row.expires_at,
+                    }
+            return None
+        finally:
+            session.close()
+
+    def claim_dispatch(self, client_order_id: str, now: datetime) -> bool:
+        from sqlalchemy.exc import IntegrityError
+
+        session = self._session()
+        try:
+            session.add(
+                DispatchClaimRow(
+                    client_order_id=client_order_id,
+                    claimed_at=isoformat(now),
+                    state="claimed",
+                )
+            )
+            session.commit()
+            return True
+        except IntegrityError:
+            session.rollback()
+            return False
+        finally:
+            session.close()
+
+    def append_audit(
+        self,
+        *,
+        actor: str,
+        role: str,
+        action: str,
+        path: str,
+        outcome: str,
+        detail: str,
+        now: datetime,
+    ) -> None:
+        session = self._session()
+        try:
+            session.add(
+                AuditLogRow(
+                    created_at=isoformat(now),
+                    actor=actor[:80],
+                    role=role[:40],
+                    action=action[:80],
+                    path=path[:200],
+                    outcome=outcome[:40],
+                    detail=detail[:300],
+                )
+            )
+            session.commit()
+        finally:
+            session.close()
+
+    def list_audit(self, limit: int = 50) -> list[dict]:
+        session = self._session()
+        try:
+            rows = session.scalars(select(AuditLogRow).order_by(AuditLogRow.id.desc()).limit(limit)).all()
+            return [
+                {
+                    "id": row.id,
+                    "created_at": row.created_at,
+                    "actor": row.actor,
+                    "role": row.role,
+                    "action": row.action,
+                    "path": row.path,
+                    "outcome": row.outcome,
+                    "detail": row.detail,
+                }
+                for row in rows
+            ]
         finally:
             session.close()
 

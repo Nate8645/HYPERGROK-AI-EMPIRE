@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from fastapi.testclient import TestClient
+from tests.support import authed
 
 from hypergrok.agents.risk_manager import risk_passed
 from hypergrok.config import Settings
@@ -220,7 +220,7 @@ def test_exit_preview_respects_feed_stale_data_and_kill_switch() -> None:
 def test_final_seven_agent_preview_does_not_submit() -> None:
     fake = FakeCoinbase()
     app = _app(fake, account_currency="USD", starting_capital=Decimal("1000"))
-    with TestClient(app) as client:
+    with authed(app) as client:
         body = client.post(
             "/api/desk/team",
             json={

@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from decimal import Decimal
 from pathlib import Path
 
-from fastapi.testclient import TestClient
+from tests.support import authed
 
 from hypergrok.venues.coinbase.broker import CoinbaseBroker
 from hypergrok.venues.coinbase.utilization import backtest_for_product, funded_quote_currency, utilization_variants
@@ -47,7 +47,7 @@ def test_buy_preview_sell_holdings_and_balance_blocks() -> None:
     fake = FakeCoinbase()
     _funded(fake, btc="0.01")
     app = _app(fake, account_currency="USDC", starting_capital=Decimal("10.896768"), min_order_notional=Decimal("1"), min_order_notional_currency="USDC")
-    with TestClient(app) as client:
+    with authed(app) as client:
         bought = client.post(
             "/api/coinbase/orders",
             json=_order(client_order_id="buy-preview", quote_size="2", entry_price="100", stop_price="99.5"),
@@ -83,7 +83,7 @@ def test_buy_preview_sell_holdings_and_balance_blocks() -> None:
     flat_fake = FakeCoinbase()
     _funded(flat_fake, btc="0")
     flat_app = _app(flat_fake, account_currency="USDC", starting_capital=Decimal("10.896768"), min_order_notional=Decimal("1"), min_order_notional_currency="USDC")
-    with TestClient(flat_app) as client:
+    with authed(flat_app) as client:
         flat = client.post(
             "/api/coinbase/orders",
             json=_order(client_order_id="sell-flat", side="sell", quote_size=None, base_size="0.01", entry_price="100", stop_price="100.2"),
@@ -152,8 +152,9 @@ def test_duplicate_unknown_permissions_risk_kill_and_unauthorized() -> None:
         coinbase_product_allowlist="BTC-USDC",
         coinbase_max_capital=Decimal("10.896768"),
     )
-    with TestClient(app) as client:
-        token = client.post("/api/approvals", json={"client_order_id": "dup-1"}).json()["token"]
+    with authed(app) as client:
+        dup_order = _order(client_order_id="dup-1", quote_size="2", entry_price="100", stop_price="99.5")
+        token = client.post("/api/approvals", json={"client_order_id": "dup-1", "order": dup_order}).json()["token"]
         first = client.post(
             "/api/coinbase/orders",
             json=_order(client_order_id="dup-1", quote_size="2", entry_price="100", stop_price="99.5", request_live=True, approval_token=token),
@@ -231,13 +232,13 @@ def test_duplicate_unknown_permissions_risk_kill_and_unauthorized() -> None:
     before = fresh.calls.count("market_order")
     broker = CoinbaseBroker(fresh, clock=lambda: moment, store=fresh_app.state.store)
     first_unknown = broker.submit(
-        {"client_order_id": "unknown-usdc", "product_id": "BTC-USDC", "side": "buy", "order_type": "market", "quote_size": "2", "base_size": None}
+        {"client_order_id": "unknown-usdc", "product_id": "BTC-USDC", "side": "buy", "order_type": "market", "quote_size": "2", "entry_price": "100", "stop_price": "99.5", "base_size": None}
     )
     assert first_unknown["status"] == "unknown"
     assert "list_orders" in fresh.calls
     restarted = CoinbaseBroker(fresh, clock=lambda: moment, store=fresh_app.state.store)
     restarted.submit(
-        {"client_order_id": "unknown-usdc", "product_id": "BTC-USDC", "side": "buy", "order_type": "market", "quote_size": "2", "base_size": None}
+        {"client_order_id": "unknown-usdc", "product_id": "BTC-USDC", "side": "buy", "order_type": "market", "quote_size": "2", "entry_price": "100", "stop_price": "99.5", "base_size": None}
     )
     assert fresh.calls.count("market_order") == before + 1
 
@@ -247,7 +248,7 @@ def test_limit_post_only_and_team_preview_does_not_submit() -> None:
     _funded(fake, btc="0.5")
     app = _app(fake, account_currency="USD", starting_capital=Decimal("1000"), coinbase_product_allowlist="BTC-USD")
     fake.product = FakeCoinbase().product
-    with TestClient(app) as client:
+    with authed(app) as client:
         fake.accounts["accounts"].append(
             {"available_balance": {"value": "1000", "currency": "USD"}, "hold": {"value": "0", "currency": "USD"}}
         )

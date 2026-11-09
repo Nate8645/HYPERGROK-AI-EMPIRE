@@ -7,12 +7,12 @@ from fastapi.testclient import TestClient
 from hypergrok.agents.catalog import AGENTS
 from hypergrok.config import Settings
 from hypergrok.main import create_app
-from tests.support import fitting_idea, make_settings, sample_order
+from tests.support import auth_overrides, authed, fitting_idea, make_settings, sample_order
 
 
 def test_default_paper_account_is_20_chf_and_needs_an_explicit_usd_rate() -> None:
-    app = create_app(Settings(_env_file=None, database_url="sqlite://"))
-    with TestClient(app) as client:
+    app = create_app(Settings(_env_file=None, database_url="sqlite://", **auth_overrides()))
+    with authed(app) as client:
         account = client.get("/api/risk/account").json()
         assert account["currency"] == "CHF"
         assert account["equity"] == "20"
@@ -108,10 +108,10 @@ def test_kill_switch_blocks_and_then_releases_orders(client) -> None:
 def test_kill_switch_persists_across_a_new_process(tmp_path) -> None:
     url = f"sqlite:///{tmp_path / 'desk.db'}"
     first = create_app(make_settings(database_url=url))
-    with TestClient(first) as client:
+    with authed(first) as client:
         assert client.post("/api/risk/kill-switch", json={"engaged": True, "reason": "halt"}).status_code == 200
     second = create_app(make_settings(database_url=url))
-    with TestClient(second) as client:
+    with authed(second) as client:
         assert client.get("/api/risk/kill-switch").json()["engaged"] is True
         decision = client.post("/api/risk/evaluate", json=sample_order("persist-1")).json()
         assert decision["status"] == "REJECT"

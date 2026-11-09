@@ -88,6 +88,28 @@ class ApprovalRow(Base):
     note: Mapped[str] = mapped_column(String, nullable=False, default="")
     created_at: Mapped[str] = mapped_column(String, nullable=False)
     used_at: Mapped[str | None] = mapped_column(String, nullable=True)
+    order_hash: Mapped[str] = mapped_column(String, nullable=False, default="")
+    expires_at: Mapped[str] = mapped_column(String, nullable=False, default="")
+    created_by: Mapped[str] = mapped_column(String, nullable=False, default="")
+
+
+class RiskGrantRow(Base):
+    __tablename__ = "risk_grants"
+
+    decision_id: Mapped[str] = mapped_column(String, primary_key=True)
+    order_hash: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    client_order_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    case_id: Mapped[str] = mapped_column(String, nullable=False)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    expires_at: Mapped[str] = mapped_column(String, nullable=False)
+
+
+class DispatchClaimRow(Base):
+    __tablename__ = "dispatch_claims"
+
+    client_order_id: Mapped[str] = mapped_column(String, primary_key=True)
+    claimed_at: Mapped[str] = mapped_column(String, nullable=False)
+    state: Mapped[str] = mapped_column(String, nullable=False)
 
 
 class BlackboardRow(Base):
@@ -131,6 +153,21 @@ class CandleCacheRow(Base):
     fetched_at: Mapped[str] = mapped_column(String, nullable=False)
     source: Mapped[str] = mapped_column(String, nullable=False)
     payload_json: Mapped[list] = mapped_column(JSON, nullable=False)
+
+
+class AuditLogRow(Base):
+    """Append-only. The store exposes insert and list, not update or delete."""
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    actor: Mapped[str] = mapped_column(String, nullable=False)
+    role: Mapped[str] = mapped_column(String, nullable=False)
+    action: Mapped[str] = mapped_column(String, nullable=False)
+    path: Mapped[str] = mapped_column(String, nullable=False)
+    outcome: Mapped[str] = mapped_column(String, nullable=False)
+    detail: Mapped[str] = mapped_column(String, nullable=False, default="")
 
 
 class ExecutionAttemptRow(Base):

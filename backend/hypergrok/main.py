@@ -8,6 +8,9 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+
+from hypergrok.auth import SessionStore, gate_request
 from fastapi.responses import JSONResponse
 
 from hypergrok import __version__
@@ -104,9 +107,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.adapter = adapter
     app.state.orchestrator = orchestrator
     app.state.coinbase = coinbase
+    app.state.sessions = SessionStore()
+
+    class DeskAuthMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            denied = gate_request(request)
+            if denied is not None:
+                return denied
+            return await call_next(request)
+
+    app.add_middleware(DeskAuthMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )

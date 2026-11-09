@@ -36,6 +36,81 @@ class ApprovalCreate(BaseModel):
 
     client_order_id: str = Field(min_length=1, max_length=128)
     note: str = Field(default="", max_length=500)
+    order: dict | None = None
+    ttl_seconds: int = 900
+
+
+class LoginBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=1, max_length=200)
+
+
+@router.post("/api/auth/login")
+def login(body: LoginBody, request: Request):
+    from fastapi.responses import JSONResponse
+
+    from hypergrok.auth import authenticate
+
+    now = utcnow()
+    settings = request.app.state.settings
+    if settings.auth_mandate_expires_at is not None and settings.auth_mandate_expires_at <= now:
+        request.app.state.store.append_audit(
+            actor=body.username,
+            role="none",
+            action="login",
+            path="/api/auth/login",
+            outcome="denied",
+            detail="expired_mandate",
+            now=now,
+        )
+        return JSONResponse(status_code=401, content={"error": {"code": "expired_mandate", "message": "the mandate has expired"}})
+    session = authenticate(settings, body.username, body.password, now)
+    if session is None:
+        request.app.state.store.append_audit(
+            actor=body.username,
+            role="none",
+            action="login",
+            path="/api/auth/login",
+            outcome="denied",
+            detail="login_failed",
+            now=now,
+        )
+        return JSONResponse(status_code=401, content={"error": {"code": "invalid_credentials", "message": "login failed"}})
+    request.app.state.sessions.put(session)
+    request.app.state.store.append_audit(
+        actor=session.username,
+        role=session.role,
+        action="login",
+        path="/api/auth/login",
+        outcome="allowed",
+        detail="session_created",
+        now=now,
+    )
+    response = JSONResponse({"authenticated": True, "role": session.role, "expires_at": session.expires_at.isoformat()})
+    response.set_cookie(
+        "hg_session",
+        session.token,
+        httponly=True,
+        samesite="strict",
+        secure=settings.auth_cookie_secure,
+        max_age=settings.auth_session_seconds,
+        path="/",
+    )
+    return response
+
+
+@router.get("/api/auth/session")
+def session_status(request: Request) -> dict:
+    token = request.cookies.get("hg_session")
+    header = request.headers.get("authorization", "")
+    if not token and header.lower().startswith("bearer "):
+        token = header[7:].strip()
+    session = request.app.state.sessions.get(token or "", utcnow())
+    if session is None:
+        return {"authenticated": False, "role": None}
+    return {"authenticated": True, "role": session.role, "expires_at": session.expires_at.isoformat()}
 
 
 @router.get("/health")
@@ -58,6 +133,11 @@ def health(request: Request) -> dict:
 
 @router.websocket("/ws/events")
 async def ws_events(websocket: WebSocket) -> None:
+    token = websocket.cookies.get("hg_session") or websocket.query_params.get("access_token")
+    session = websocket.app.state.sessions.get(token or "", utcnow())
+    if session is None or session.role not in {"viewer", "operator"}:
+        await websocket.close(code=1008)
+        return
     bus = websocket.app.state.bus
     await websocket.accept()
     bus.bind_loop(asyncio.get_running_loop())
@@ -265,10 +345,21 @@ def run_team(body: DeskIdea, request: Request) -> dict:
 
 @router.post("/api/approvals")
 def create_approval(body: ApprovalCreate, request: Request) -> dict:
+    from datetime import timedelta
+
+    from hypergrok.order_binding import fingerprint
+
+    now = utcnow()
+    actor = getattr(getattr(request.state, "session", None), "username", "")
+    order = dict(body.order or {})
+    order["client_order_id"] = body.client_order_id.strip()
     created = request.app.state.store.create_approval(
         client_order_id=body.client_order_id.strip(),
         note=body.note,
-        now=utcnow(),
+        now=now,
+        order_hash="" if body.order is None else fingerprint(order),
+        expires_at=now + timedelta(seconds=body.ttl_seconds),
+        created_by=actor,
     )
     logger.info(
         "human approval recorded",

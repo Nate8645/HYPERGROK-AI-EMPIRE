@@ -15,7 +15,7 @@ if str(BACKEND) not in sys.path:
 
 from hypergrok.config import Settings  # noqa: E402
 from hypergrok.main import create_app  # noqa: E402
-from tests.support import fresh_snapshot, fitting_idea, make_settings, sample_order  # noqa: E402
+from tests.support import fresh_snapshot, fitting_idea, login, make_settings, sample_order  # noqa: E402
 
 __all__ = ["fresh_snapshot", "fitting_idea", "make_settings", "sample_order"]
 
@@ -40,4 +40,5 @@ def app(settings: Settings):
 @pytest.fixture
 def client(app):
     with TestClient(app) as test_client:
+        login(test_client)
         yield test_client

@@ -145,6 +145,15 @@ class Settings(BaseSettings):
         default=Decimal("1"),
         validation_alias=AliasChoices("HYPERGROK_SIMULATION_MAX_CAPITAL_FRACTION"),
     )
+    auth_username: str = ""
+    auth_password_hash: str = ""
+    auth_viewer_username: str = ""
+    auth_viewer_password_hash: str = ""
+    auth_session_seconds: int = 3600
+    auth_cookie_secure: bool = False
+    auth_mandate_expires_at: datetime | None = None
+    auth_rate_limit_per_minute: int = 120
+    auth_login_limit_per_minute: int = 8
 
     def coinbase_products(self) -> frozenset[str]:
         return frozenset(

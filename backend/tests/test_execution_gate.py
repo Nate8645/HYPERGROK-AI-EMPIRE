@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi.testclient import TestClient
+from tests.support import authed
 
 from hypergrok.execution.adapter import ExecutionAdapter
 from hypergrok.execution.dry_run import DryRunAdapter
@@ -75,7 +76,7 @@ def test_desk_run_rejects_live_orders_until_phase_1_can_transmit(client) -> None
 
 def test_approved_live_order_is_still_not_transmitted() -> None:
     app = create_app(make_settings(live_trading_enabled=True))
-    with TestClient(app) as client:
+    with authed(app) as client:
         bare = fitting_idea(request_live=True)
         first = client.post("/api/desk/run", json=bare.model_dump(mode="json"))
         assert first.json()["execution"]["gate_reason"] == "missing_human_approval"
