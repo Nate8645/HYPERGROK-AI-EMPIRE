@@ -32,6 +32,12 @@ class ResearchAnalyst:
 
         inputs: list[str] = []
         reasons: list[str] = []
+        if research.regime:
+            inputs.append(f"regime:{research.regime}")
+        if research.source:
+            inputs.append(f"source:{research.source}")
+        if research.observed_at is not None:
+            inputs.append(f"observed_at:{research.observed_at.isoformat()}")
         if research.trend != "unknown":
             inputs.append("trend")
         if research.funding_bps is not None:
@@ -62,6 +68,10 @@ class ResearchAnalyst:
             stance = "insufficient_evidence"
             reasons.append("research inputs do not support a side")
 
+        if research.conflicts:
+            inputs.append("conflicts")
+            reasons.append("conflicting signals: " + ", ".join(research.conflicts))
+            stance = "neutral"
         status = "completed" if stance != "insufficient_evidence" else "insufficient_evidence"
         return ResearchNote(
             status=status,

@@ -12,6 +12,7 @@ from hypergrok.agents.catalog import MODE
 from hypergrok.agents.schemas import ExecutionReport
 from hypergrok.domain import DeskIdea, OrderIntent, RiskDecision
 from hypergrok.errors import DeskError
+from hypergrok.agents.risk_manager import RiskManager
 from hypergrok.execution.adapter import ExecutionAdapter, order_payload
 from hypergrok.execution.gate import ExecutionGate
 from hypergrok.risk.engine import RiskEngine
@@ -29,12 +30,14 @@ class ExecutionTrader:
         adapter: ExecutionAdapter,
         store: DeskStore,
         engine: RiskEngine,
+        risk_manager: RiskManager,
         coinbase: ExecutionAdapter | None = None,
     ) -> None:
         self.gate = gate
         self.adapter = adapter
         self.store = store
         self.engine = engine
+        self.risk_manager = risk_manager
         self.settings = engine.settings
         self.coinbase = coinbase
 
@@ -47,14 +50,8 @@ class ExecutionTrader:
         case_id: str,
         now: datetime,
     ) -> ExecutionReport:
-        del decision  # The caller’s decision is not authority. The engine is.
-        fresh = self.engine.evaluate(
-            order,
-            self.store.load_account(now),
-            now=now,
-            kill_switch_engaged=self.store.get_kill_switch().engaged,
-            seen_client_order_ids=self.store.ids_for_risk_recheck(order.client_order_id, case_id),
-        )
+        del decision  # A caller-supplied PASS is not authority. Risk Manager is.
+        fresh = self.risk_manager.run(order, now=now, case_id=case_id)
         if fresh.status != "PASS" or fresh.engine != "risk_engine":
             return ExecutionReport(
                 status="skipped",

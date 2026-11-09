@@ -180,6 +180,10 @@ class ResearchInput(BaseModel):
     trend: Literal["up", "down", "flat", "unknown"] = "unknown"
     funding_bps: Dec | None = None
     observed_spread_bps: Dec | None = None
+    regime: str | None = None
+    source: str | None = None
+    observed_at: datetime | None = None
+    conflicts: list[str] = Field(default_factory=list)
     notes: str = Field(default="", max_length=2000)
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import uuid
 from datetime import datetime
 from decimal import Decimal
 
@@ -220,7 +221,9 @@ class CoinbaseService:
                 self._journal("order_rejected", exc.message, {"code": exc.code}, symbol=str(order.get("product_id") or "-"))
                 raise
         intent = self._intent(prepared, product, fee_bps, slip_bps, moment)
-        decision = self.risk_service.evaluate(intent, moment)
+        from hypergrok.agents.risk_manager import RiskManager
+
+        decision = RiskManager(self.risk_service).run(intent, now=moment, case_id=uuid.uuid4().hex)
         if decision.status != "PASS":
             self._journal("risk_rejected", decision.summary, {"reasons": decision.reasons}, symbol=intent.symbol)
             return {"status": "rejected", "reason": "risk_rejected", "decision": decision.model_dump(mode="json"), "transmitted": False}

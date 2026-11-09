@@ -37,6 +37,12 @@
       "evidence": "not present in the repository"
     },
     {
+      "id": "phase3-indicators",
+      "label": "Rule-based indicators and backtests",
+      "done": true,
+      "evidence": "docs/research/backtests/public-candles.json"
+    },
+    {
       "id": "github-pages",
       "label": "GitHub Pages deploy from main",
       "done": false,

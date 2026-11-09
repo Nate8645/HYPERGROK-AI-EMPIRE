@@ -90,6 +90,49 @@ class ApprovalRow(Base):
     used_at: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
+class BlackboardRow(Base):
+    __tablename__ = "blackboard"
+
+    key: Mapped[str] = mapped_column(String, primary_key=True)
+    updated_at: Mapped[str] = mapped_column(String, nullable=False)
+    source: Mapped[str] = mapped_column(String, nullable=False)
+    payload_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class AgentMessageRow(Base):
+    __tablename__ = "agent_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    case_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    from_agent: Mapped[str] = mapped_column(String, nullable=False)
+    to_agent: Mapped[str] = mapped_column(String, nullable=False)
+    schema_name: Mapped[str] = mapped_column(String, nullable=False)
+    body_json: Mapped[dict] = mapped_column(JSON, nullable=False)
+
+
+class DecisionLogRow(Base):
+    __tablename__ = "decision_log"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    created_at: Mapped[str] = mapped_column(String, nullable=False)
+    case_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    stage: Mapped[str] = mapped_column(String, nullable=False)
+    decision: Mapped[str] = mapped_column(String, nullable=False)
+    reasons_json: Mapped[list] = mapped_column(JSON, nullable=False)
+
+
+class CandleCacheRow(Base):
+    __tablename__ = "candle_cache"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    product_id: Mapped[str] = mapped_column(String, nullable=False, index=True)
+    granularity: Mapped[str] = mapped_column(String, nullable=False)
+    fetched_at: Mapped[str] = mapped_column(String, nullable=False)
+    source: Mapped[str] = mapped_column(String, nullable=False)
+    payload_json: Mapped[list] = mapped_column(JSON, nullable=False)
+
+
 class ExecutionAttemptRow(Base):
     __tablename__ = "execution_attempts"
 

@@ -67,6 +67,19 @@ export function formatZurich(value: string | null | undefined): string {
   }).format(date);
 }
 
+export function backtestLines(summary: { available?: boolean; products?: Record<string, { start?: string; end?: string; test_expectancy?: Record<string, string>; overfit_warning?: Record<string, string | null> }> } | null): string[] {
+  if (!summary?.available || !summary.products) {
+    return ["Keine Daten"];
+  }
+  return Object.entries(summary.products).map(([product, body]) => {
+    const warnings = Object.entries(body.overfit_warning ?? {})
+      .filter(([, warning]) => warning)
+      .map(([name, warning]) => `${name}:${warning}`)
+      .join(", ");
+    return `${product} ${body.start ?? "Keine Daten"} bis ${body.end ?? "Keine Daten"}${warnings ? ` Warnung ${warnings}` : ""}`;
+  });
+}
+
 export function checklistProgress(items: ChecklistItem[]): { done: number; total: number } {
   return { done: items.filter((item) => item.done).length, total: items.length };
 }

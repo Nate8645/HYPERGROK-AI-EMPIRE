@@ -54,7 +54,9 @@ class RiskService:
         session: Session = self.store._session()
         try:
             already = force_duplicate or self.store.client_order_exists(session, order.client_order_id)
-            seen = {order.client_order_id} if already else set()
+            seen = self.store.ids_for_risk_recheck(order.client_order_id, None if force_duplicate else case_id)
+            if force_duplicate or (already and case_id is None):
+                seen.add(order.client_order_id)
             account = self._account_in_session(session, now)
             kill = self._kill_in_session(session)
             decision = self.engine.evaluate(

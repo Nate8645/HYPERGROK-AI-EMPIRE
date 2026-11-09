@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import backtestsFile from "./backtests.json";
 import statusFile from "./status.json";
 import {
   CURSOR_AGENT_URL,
@@ -7,6 +8,7 @@ import {
   type GithubSnapshot,
   UI_TICK_MS,
   checklistProgress,
+  backtestLines,
   loadGithub,
   mapAgents,
   formatZurich,
@@ -145,6 +147,14 @@ export function App() {
       <section className="card">
         <h2>Dateien im letzten Commit</h2>
         {github?.files.length ? <ul>{github.files.map((file) => <li key={file}>{file}</li>)}</ul> : <p>Keine Daten</p>}
+      </section>
+      <section className="card">
+        <h2>Backtests</h2>
+        <ul>{backtestLines(backtestsFile).map((line) => <li key={line}>{line}</li>)}</ul>
+      </section>
+      <section className="card">
+        <h2>Fehler und Warnungen</h2>
+        <p>{github?.error === "rate_limit" ? "GitHub Rate-Limit" : github?.error === "github_error" ? "GitHub Fehler" : "Keine Daten"}</p>
       </section>
       <section className="card">
         <h2>Aktivität</h2>

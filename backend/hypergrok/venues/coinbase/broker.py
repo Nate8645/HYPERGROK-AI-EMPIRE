@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from hypergrok.clock import utcnow
+from hypergrok.agents.risk_manager import risk_passed
 from hypergrok.venues.coinbase.market import (
     CoinbaseFailure,
     as_dict,
@@ -47,6 +48,8 @@ class CoinbaseBroker:
         client_order_id = str(prepared.get("client_order_id") or "")
         if not client_order_id:
             raise CoinbaseFailure("invalid_order", "client_order_id is required")
+        if not risk_passed(client_order_id):
+            raise CoinbaseFailure("risk_manager_required", "the risk manager has not passed this order")
         if client_order_id in self._attempted:
             found = self.reconcile(client_order_id)
             if found:

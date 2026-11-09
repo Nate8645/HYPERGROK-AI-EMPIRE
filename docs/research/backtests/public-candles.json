@@ -1,0 +1,1242 @@
+{
+  "available": true,
+  "source": "https://api.exchange.coinbase.com/products/{product_id}/candles",
+  "granularity_seconds": 86400,
+  "fetched_at": "2026-11-09T20:23:32.097036+00:00",
+  "note": "Public daily candles. A 400-day explicit window was rejected by the API (HTTP 400). These runs use the latest candles the endpoint returned with granularity=86400 and no start/end. Fees are a 60 bps taker assumption plus 5 bps slippage, not a live fee-tier pull. This is not a prediction.",
+  "products": {
+    "BTC-USD": {
+      "bars": 350,
+      "start": "2025-11-25T00:00:00+00:00",
+      "end": "2026-11-09T00:00:00+00:00",
+      "strategies": {
+        "ema_cross": {
+          "splits": {
+            "train": {
+              "trades": 4,
+              "expectancy": "-0.01546177149420713784648824015",
+              "win_rate": "0.25",
+              "profit_factor": "0.4759957068742982654762221964",
+              "max_drawdown": "0.1136037502313077042093696304",
+              "sharpe": null,
+              "ending_equity": "0.9361946444032650798054923381",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 3,
+              "expectancy": "0.02763308626405718972603569026",
+              "win_rate": "0.3333333333333333333333333333",
+              "profit_factor": "3.295130456616534542229572186",
+              "max_drawdown": "0.0359639962722666745817228610",
+              "sharpe": null,
+              "ending_equity": "1.078774495923838289566834320",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 70
+            },
+            "test": {
+              "trades": 1,
+              "expectancy": "-0.07023694374588768838518796460",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.0702369437458876883851879646",
+              "sharpe": null,
+              "ending_equity": "0.9297630562541123116148120354",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 2,
+                  "expectancy": "-0.01933822174652978424498412582",
+                  "win_rate": "0",
+                  "profit_factor": "0",
+                  "max_drawdown": "0.0383377442526518638696586533",
+                  "sharpe": null,
+                  "ending_equity": "0.9616622557473481361303413467",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 2,
+                  "expectancy": "0.01919022754960374822521116100",
+                  "win_rate": "1",
+                  "profit_factor": null,
+                  "max_drawdown": "0",
+                  "sharpe": null,
+                  "ending_equity": "1.038392771342648859527989413",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 5,
+                  "expectancy": "-0.01230469165578517868675237439",
+                  "win_rate": "0.4",
+                  "profit_factor": "0.4787376679610164923696869661",
+                  "max_drawdown": "0.1136037502313077042093696304",
+                  "sharpe": null,
+                  "ending_equity": "0.9364976229208221059631196268",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 1,
+                  "expectancy": "0.1618003528504754959998700046",
+                  "win_rate": "1",
+                  "profit_factor": null,
+                  "max_drawdown": "0",
+                  "sharpe": null,
+                  "ending_equity": "1.161800352850475495999870005",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "ema_cross"
+        },
+        "mean_reversion": {
+          "splits": {
+            "train": {
+              "trades": 10,
+              "expectancy": "-0.03187869081634378044085602043",
+              "win_rate": "0.5",
+              "profit_factor": "0.1624605668759713806995256213",
+              "max_drawdown": "0.3065492814851296977459805649",
+              "sharpe": null,
+              "ending_equity": "0.6994438934513372211642821208",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 2,
+              "expectancy": "0.004201565542656193777812177898",
+              "win_rate": "0.5",
+              "profit_factor": "4.601868971113074186164748690",
+              "max_drawdown": "0.0023329918863527105236127872",
+              "sharpe": null,
+              "ending_equity": "1.008378083797528607930341194",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 70
+            },
+            "test": {
+              "trades": 3,
+              "expectancy": "-0.00785098958953592493304396560",
+              "win_rate": "0.3333333333333333333333333333",
+              "profit_factor": "0.4676277949531393892815785766",
+              "max_drawdown": "0.02793453783977393733570874068",
+              "sharpe": null,
+              "ending_equity": "0.9759966896106500109658568792",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 4,
+                  "expectancy": "-0.04675881144327339012842078682",
+                  "win_rate": "0.5",
+                  "profit_factor": "0.06468237526861712974617865082",
+                  "max_drawdown": "0.1992045112362240536635958171",
+                  "sharpe": null,
+                  "ending_equity": "0.8111830979364971370204848416",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 3,
+                  "expectancy": "-0.06311849798626571751241226543",
+                  "win_rate": "0.3333333333333333333333333333",
+                  "profit_factor": "0.01489988740344096706014423796",
+                  "max_drawdown": "0.1887690463590380216446694127",
+                  "sharpe": null,
+                  "ending_equity": "0.8112309536409619783553305873",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 10,
+                  "expectancy": "-0.03374073438364710291174579875",
+                  "win_rate": "0.5",
+                  "profit_factor": "0.1548835223220735130567439312",
+                  "max_drawdown": "0.3220597664243114402131927910",
+                  "sharpe": null,
+                  "ending_equity": "0.6837993585398819864482852366",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 4,
+                  "expectancy": "-0.001422990017220274785810859588",
+                  "win_rate": "0.5",
+                  "profit_factor": "0.7986021103240469411602629253",
+                  "max_drawdown": "0.01571089084869554764302640368",
+                  "sharpe": null,
+                  "ending_equity": "0.9939096337163153127928820813",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "mean_reversion"
+        },
+        "breakout": {
+          "splits": {
+            "train": {
+              "trades": 7,
+              "expectancy": "-0.01465353809729140900424560826",
+              "win_rate": "0.2857142857142857142857142857",
+              "profit_factor": "0.1479182258975242699618955094",
+              "max_drawdown": "0.1149317312365278899224360107",
+              "sharpe": null,
+              "ending_equity": "0.9008941293549222407638342761",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 3,
+              "expectancy": "0.02039898930028932189181028156",
+              "win_rate": "0.3333333333333333333333333333",
+              "profit_factor": "2.684092487763045497814363560",
+              "max_drawdown": "0.0360093875015774507369568007",
+              "sharpe": null,
+              "ending_equity": "1.058013643541253554585092199",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 70
+            },
+            "test": {
+              "trades": 1,
+              "expectancy": "-0.01744014088240637471449113883",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.0174401408824063747144911388",
+              "sharpe": null,
+              "ending_equity": "0.9825598591175936252855088612",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 4,
+                  "expectancy": "-0.01561537225911790067799831349",
+                  "win_rate": "0.25",
+                  "profit_factor": "0.1511349210303114466531625973",
+                  "max_drawdown": "0.07196394753328212481789410039",
+                  "sharpe": null,
+                  "ending_equity": "0.9383566142261841051518639071",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 4,
+                  "expectancy": "-0.01325733083687480228757854517",
+                  "win_rate": "0.25",
+                  "profit_factor": "0.1119606195272729807491579860",
+                  "max_drawdown": "0.0523238967735110911645633304",
+                  "sharpe": null,
+                  "ending_equity": "0.9476761032264889088354366696",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 8,
+                  "expectancy": "-0.01443635154799635148278842932",
+                  "win_rate": "0.25",
+                  "profit_factor": "0.1335854750792146339622124120",
+                  "max_drawdown": "0.1205224101446473939638484788",
+                  "sharpe": null,
+                  "ending_equity": "0.8892581396066718789854638384",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 2,
+                  "expectancy": "0.04004753674490147106225728695",
+                  "win_rate": "0.5",
+                  "profit_factor": "5.592570325541515752859510870",
+                  "max_drawdown": "0.01744014088240637471449113887",
+                  "sharpe": null,
+                  "ending_equity": "1.078394045610155904608356001",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "breakout"
+        },
+        "momentum": {
+          "splits": {
+            "train": {
+              "trades": 16,
+              "expectancy": "-0.01595356215949871736067236902",
+              "win_rate": "0.125",
+              "profit_factor": "0.3828728602636224048033266137",
+              "max_drawdown": "0.2794007077678099281112394818",
+              "sharpe": null,
+              "ending_equity": "0.7619977132821644082533341607",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 6,
+              "expectancy": "-0.002608366542840904220169722317",
+              "win_rate": "0.1666666666666666666666666667",
+              "profit_factor": "0.8837877371007711894291998531",
+              "max_drawdown": "0.1278054394332230848106578238",
+              "sharpe": null,
+              "ending_equity": "0.9760021864169621626961407045",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 70
+            },
+            "test": {
+              "trades": 5,
+              "expectancy": "-0.0218693883033113078349739345",
+              "win_rate": "0.2",
+              "profit_factor": "0.2455188426431124133747432346",
+              "max_drawdown": "0.1379421729718826373560315719",
+              "sharpe": null,
+              "ending_equity": "0.8927324666849036559518688172",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 11,
+                  "expectancy": "-0.0243517673806621163691975622",
+                  "win_rate": "0.09090909090909090909090909091",
+                  "profit_factor": "0.09301082450409332109626180208",
+                  "max_drawdown": "0.2395843639029136483639702099",
+                  "sharpe": null,
+                  "ending_equity": "0.7604156360970863516360297901",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 6,
+                  "expectancy": "0.00096989812377023172290572470",
+                  "win_rate": "0.1666666666666666666666666667",
+                  "profit_factor": "1.046527089169847933318080680",
+                  "max_drawdown": "0.1191659384795854804051526943",
+                  "sharpe": null,
+                  "ending_equity": "0.9961305449230457285851437123",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 18,
+                  "expectancy": "-0.01744984696988328541179026227",
+                  "win_rate": "0.1111111111111111111111111111",
+                  "profit_factor": "0.3351899744988513232708258088",
+                  "max_drawdown": "0.2821890343575874306616491027",
+                  "sharpe": null,
+                  "ending_equity": "0.7178109656424125693383508973",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 8,
+                  "expectancy": "-0.01307558614823027580803649841",
+                  "win_rate": "0.25",
+                  "profit_factor": "0.5665409873132494679997547014",
+                  "max_drawdown": "0.1700610224765956864024897910",
+                  "sharpe": null,
+                  "ending_equity": "0.8900642748457523011399703579",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "momentum"
+        }
+      }
+    },
+    "ETH-USD": {
+      "bars": 350,
+      "start": "2025-11-25T00:00:00+00:00",
+      "end": "2026-11-09T00:00:00+00:00",
+      "strategies": {
+        "ema_cross": {
+          "splits": {
+            "train": {
+              "trades": 4,
+              "expectancy": "-0.04535462683999261312841147728",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.1704238303529467824957759228",
+              "sharpe": null,
+              "ending_equity": "0.8295761696470532175042240772",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 1,
+              "expectancy": "0.3724014096922722120033830827",
+              "win_rate": "1",
+              "profit_factor": null,
+              "max_drawdown": "0",
+              "sharpe": null,
+              "ending_equity": "1.372401409692272212003383083",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 70
+            },
+            "test": {
+              "trades": 1,
+              "expectancy": "-0.1205621744854484158477215489",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.1205621744854484158477215489",
+              "sharpe": null,
+              "ending_equity": "0.8794378255145515841522784511",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 3,
+                  "expectancy": "-0.03457174524800226101564872133",
+                  "win_rate": "0.3333333333333333333333333333",
+                  "profit_factor": "0.1046266824985317077921063900",
+                  "max_drawdown": "0.1124812094615125392690292004",
+                  "sharpe": null,
+                  "ending_equity": "0.8982749794805098374353339632",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 2,
+                  "expectancy": "0.02460770463100507297851626854",
+                  "win_rate": "1",
+                  "profit_factor": null,
+                  "max_drawdown": "0",
+                  "sharpe": null,
+                  "ending_equity": "1.049364819506532710441700855",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 5,
+                  "expectancy": "-0.02709072573915386404732689338",
+                  "win_rate": "0.2",
+                  "profit_factor": "0.2533637793248825379368046030",
+                  "max_drawdown": "0.1704238303529467824957759228",
+                  "sharpe": null,
+                  "ending_equity": "0.8677075376275927528959120799",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 2,
+                  "expectancy": "0.1219277542289781327151595776",
+                  "win_rate": "0.5",
+                  "profit_factor": "9.224966722990684346501900191",
+                  "max_drawdown": "0.0296482060865150636847216559",
+                  "sharpe": null,
+                  "ending_equity": "1.235746613963714392021799758",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "ema_cross"
+        },
+        "mean_reversion": {
+          "splits": {
+            "train": {
+              "trades": 12,
+              "expectancy": "-0.03815051583972228298917692108",
+              "win_rate": "0.4166666666666666666666666667",
+              "profit_factor": "0.2297180494074028976580704176",
+              "max_drawdown": "0.4364355365554446468878671985",
+              "sharpe": null,
+              "ending_equity": "0.5911481077649667585892422754",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 0,
+              "expectancy": "0",
+              "win_rate": "0",
+              "profit_factor": null,
+              "max_drawdown": "0",
+              "sharpe": null,
+              "ending_equity": "1",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 70
+            },
+            "test": {
+              "trades": 3,
+              "expectancy": "-0.03648640716269633184917370053",
+              "win_rate": "0.3333333333333333333333333333",
+              "profit_factor": "0.01924246683879839049306586973",
+              "max_drawdown": "0.1065952920652798722628552906",
+              "sharpe": null,
+              "ending_equity": "0.8934047079347201277371447094",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 9,
+                  "expectancy": "-0.02328097752379038385407808821",
+                  "win_rate": "0.4444444444444444444444444444",
+                  "profit_factor": "0.3884044911335180585036502773",
+                  "max_drawdown": "0.3014620990510783051742599528",
+                  "sharpe": null,
+                  "ending_equity": "0.7770229486904259024740253430",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 2,
+                  "expectancy": "-0.1334536693694818021820304370",
+                  "win_rate": "0",
+                  "profit_factor": "0",
+                  "max_drawdown": "0.2539282336337965610215697352",
+                  "sharpe": null,
+                  "ending_equity": "0.7460717663662034389784302648",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 12,
+                  "expectancy": "-0.03941428425444501418321602125",
+                  "win_rate": "0.4166666666666666666666666667",
+                  "profit_factor": "0.2240023500317649227833370082",
+                  "max_drawdown": "0.4454204417108449095056268919",
+                  "sharpe": null,
+                  "ending_equity": "0.5817234367191759031036958586",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 4,
+                  "expectancy": "-0.007793530835616533132003910555",
+                  "win_rate": "0.25",
+                  "profit_factor": "0.06445017787532785768354788543",
+                  "max_drawdown": "0.0308841915672951709842508249",
+                  "sharpe": null,
+                  "ending_equity": "0.9691158084327048290157491751",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "mean_reversion"
+        },
+        "breakout": {
+          "splits": {
+            "train": {
+              "trades": 5,
+              "expectancy": "-0.02709653250728657688171091858",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.1286955364297828804943805660",
+              "sharpe": null,
+              "ending_equity": "0.8713044635702171195056194340",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 3,
+              "expectancy": "-0.01905284685016848679421518920",
+              "win_rate": "0.3333333333333333333333333333",
+              "profit_factor": "0.2574069257220684956505971039",
+              "max_drawdown": "0.0573017594566551481547426881",
+              "sharpe": null,
+              "ending_equity": "0.9426982405433448518452573119",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 70
+            },
+            "test": {
+              "trades": 1,
+              "expectancy": "-0.02081106720668689639522969411",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.0208110672066868963952296941",
+              "sharpe": null,
+              "ending_equity": "0.9791889327933131036047703059",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 3,
+                  "expectancy": "-0.02076024974281809169917424628",
+                  "win_rate": "0",
+                  "profit_factor": "0",
+                  "max_drawdown": "0.0612154837854132446082620969",
+                  "sharpe": null,
+                  "ending_equity": "0.9387845162145867553917379031",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 3,
+                  "expectancy": "-0.02870598633696985271454001030",
+                  "win_rate": "0",
+                  "profit_factor": "0",
+                  "max_drawdown": "0.0838678733587179864982486973",
+                  "sharpe": null,
+                  "ending_equity": "0.9161321266412820135017513027",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 6,
+                  "expectancy": "-0.0247331180398939722068571283",
+                  "win_rate": "0",
+                  "profit_factor": "0",
+                  "max_drawdown": "0.1399493447024235387691675035",
+                  "sharpe": null,
+                  "ending_equity": "0.8600506552975764612308324965",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 3,
+                  "expectancy": "-0.01690563297977406641499411881",
+                  "win_rate": "0.3333333333333333333333333333",
+                  "profit_factor": "0.2809164294559052600758306636",
+                  "max_drawdown": "0.06949520704006547127244585924",
+                  "sharpe": null,
+                  "ending_equity": "0.9489408939725758194112842200",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "breakout"
+        },
+        "momentum": {
+          "splits": {
+            "train": {
+              "trades": 18,
+              "expectancy": "-0.03237534790511077378576608925",
+              "win_rate": "0.1111111111111111111111111111",
+              "profit_factor": "0.1815245398916135755890310003",
+              "max_drawdown": "0.4576746075138316833468618281",
+              "sharpe": null,
+              "ending_equity": "0.5423253924861683166531381719",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 8,
+              "expectancy": "0.02180366214410032929091146542",
+              "win_rate": "0.25",
+              "profit_factor": "2.308702368849088301502419269",
+              "max_drawdown": "0.1269695013690674146926120079",
+              "sharpe": null,
+              "ending_equity": "1.150437456956769577948647019",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 70
+            },
+            "test": {
+              "trades": 3,
+              "expectancy": "-0.04050669261554290322522067997",
+              "win_rate": "0.3333333333333333333333333333",
+              "profit_factor": "0.1572600889880242904408614195",
+              "max_drawdown": "0.1392972110984918208623411926",
+              "sharpe": null,
+              "ending_equity": "0.8802203795159237978466679379",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 11,
+                  "expectancy": "-0.04195747862034436147453882356",
+                  "win_rate": "0.09090909090909090909090909091",
+                  "profit_factor": "0.07670888203069214613482120305",
+                  "max_drawdown": "0.3878763427860307233856669205",
+                  "sharpe": null,
+                  "ending_equity": "0.6179465999495877860800703010",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 6,
+                  "expectancy": "-0.001657530143544718523869544653",
+                  "win_rate": "0.3333333333333333333333333333",
+                  "profit_factor": "0.9391819659522739542855354431",
+                  "max_drawdown": "0.1551445865576552564460476395",
+                  "sharpe": null,
+                  "ending_equity": "0.9794204437816210306352695074",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 19,
+                  "expectancy": "-0.02914123059569564631864971061",
+                  "win_rate": "0.1578947368421052631578947368",
+                  "profit_factor": "0.2574056503732312450691057116",
+                  "max_drawdown": "0.4768742742489530492945913265",
+                  "sharpe": null,
+                  "ending_equity": "0.5559139597739587813345429341",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 14,
+                  "expectancy": "-0.008385613914408695626026295936",
+                  "win_rate": "0.1428571428571428571428571429",
+                  "profit_factor": "0.7141463321754945752486366469",
+                  "max_drawdown": "0.2489017773108006849384168471",
+                  "sharpe": null,
+                  "ending_equity": "0.8525911691514574335877927416",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "momentum"
+        }
+      }
+    },
+    "SOL-USD": {
+      "bars": 350,
+      "start": "2025-11-25T00:00:00+00:00",
+      "end": "2026-11-09T00:00:00+00:00",
+      "strategies": {
+        "ema_cross": {
+          "splits": {
+            "train": {
+              "trades": 4,
+              "expectancy": "-0.06160639091622099404945144205",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.2249431246208489920143715999",
+              "sharpe": null,
+              "ending_equity": "0.7750568753791510079856284001",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 2,
+              "expectancy": "0.1567317431449381930089027876",
+              "win_rate": "0.5",
+              "profit_factor": "12.95296524815918717880085646",
+              "max_drawdown": "0.0262247467286957297921274365",
+              "sharpe": null,
+              "ending_equity": "1.304555248412246154136740850",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 70
+            },
+            "test": {
+              "trades": 1,
+              "expectancy": "-0.08688507877935555140535217470",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.0868850787793555514053521747",
+              "sharpe": null,
+              "ending_equity": "0.9131149212206444485946478253",
+              "sharpe_sample_sufficient": false,
+              "strategy": "ema_cross",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 2,
+                  "expectancy": "-0.01747259934768436878357453142",
+                  "win_rate": "0.5",
+                  "profit_factor": "0.1608398264204710979263819772",
+                  "max_drawdown": "0.0416430614745528204087174738",
+                  "sharpe": null,
+                  "ending_equity": "0.9647758817931695804682780732",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 3,
+                  "expectancy": "-0.03044897227079305947566916561",
+                  "win_rate": "0.3333333333333333333333333333",
+                  "profit_factor": "0.3263628837297349448076146717",
+                  "max_drawdown": "0.1311585154339884125992764444",
+                  "sharpe": null,
+                  "ending_equity": "0.9072926224360127257820573192",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 5,
+                  "expectancy": "-0.04043398429285458484843589474",
+                  "win_rate": "0.2",
+                  "profit_factor": "0.1795903052525615441638475328",
+                  "max_drawdown": "0.2249431246208489920143715999",
+                  "sharpe": null,
+                  "ending_equity": "0.8093575151410543043542317484",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 1,
+                  "expectancy": "0.4244209411327030298859043090",
+                  "win_rate": "1",
+                  "profit_factor": null,
+                  "max_drawdown": "0",
+                  "sharpe": null,
+                  "ending_equity": "1.424420941132703029885904309",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "ema_cross",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "ema_cross"
+        },
+        "mean_reversion": {
+          "splits": {
+            "train": {
+              "trades": 12,
+              "expectancy": "-0.02846272405742062993157411966",
+              "win_rate": "0.4166666666666666666666666667",
+              "profit_factor": "0.2781205867857334951033756975",
+              "max_drawdown": "0.3555571972944951711364660722",
+              "sharpe": null,
+              "ending_equity": "0.6681854751104236241878437695",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 2,
+              "expectancy": "-0.001035489217810573924996984352",
+              "win_rate": "0.5",
+              "profit_factor": "0.2456865807700864362073733958",
+              "max_drawdown": "0.0027455145073985709183752511",
+              "sharpe": null,
+              "ending_equity": "0.9979271696158080235912351081",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 70
+            },
+            "test": {
+              "trades": 3,
+              "expectancy": "-0.0570479307493238834742797367",
+              "win_rate": "0.3333333333333333333333333333",
+              "profit_factor": "0.01230758546338394889936110995",
+              "max_drawdown": "0.1730479601489932994360203565",
+              "sharpe": null,
+              "ending_equity": "0.8287156094981266755238021969",
+              "sharpe_sample_sufficient": false,
+              "strategy": "mean_reversion",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 5,
+                  "expectancy": "-0.05968071302354454261497946278",
+                  "win_rate": "0.2",
+                  "profit_factor": "0.08288508435813549418850245744",
+                  "max_drawdown": "0.3020364507930082097628747289",
+                  "sharpe": null,
+                  "ending_equity": "0.7067368135069479215886178919",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 7,
+                  "expectancy": "-0.005988916464035963307484918679",
+                  "win_rate": "0.5714285714285714285714285714",
+                  "profit_factor": "0.7163026882927009916112727219",
+                  "max_drawdown": "0.1442620359648766472684394041",
+                  "sharpe": null,
+                  "ending_equity": "0.9465921342437255595066626342",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 13,
+                  "expectancy": "-0.02487766363148886266085566971",
+                  "win_rate": "0.4615384615384615384615384615",
+                  "profit_factor": "0.3164663618552847228380885470",
+                  "max_drawdown": "0.3555571972944951711364660722",
+                  "sharpe": null,
+                  "ending_equity": "0.6803084052651894789125341851",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 4,
+                  "expectancy": "-0.03099931583649115116722556838",
+                  "win_rate": "0.5",
+                  "profit_factor": "0.1529647857578548016759038815",
+                  "max_drawdown": "0.1461970130864735654626130728",
+                  "sharpe": null,
+                  "ending_equity": "0.8729586387259188526855204057",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "mean_reversion",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "mean_reversion"
+        },
+        "breakout": {
+          "splits": {
+            "train": {
+              "trades": 5,
+              "expectancy": "-0.01255056081803568189333334983",
+              "win_rate": "0.2",
+              "profit_factor": "0.1516698837837586128677337758",
+              "max_drawdown": "0.0721147384389194693686364928",
+              "sharpe": null,
+              "ending_equity": "0.9382955288982319306389755083",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 2,
+              "expectancy": "0.01321453081117203984021309462",
+              "win_rate": "0.5",
+              "profit_factor": "1.452616727291139768919075217",
+              "max_drawdown": "0.05839170324198807767827494646",
+              "sharpe": null,
+              "ending_equity": "1.021476232691627547217866943",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 70
+            },
+            "test": {
+              "trades": 2,
+              "expectancy": "-0.01735843974247741918305643300",
+              "win_rate": "0",
+              "profit_factor": "0",
+              "max_drawdown": "0.0344181877491259072510153751",
+              "sharpe": null,
+              "ending_equity": "0.9655818122508740927489846249",
+              "sharpe_sample_sufficient": false,
+              "strategy": "breakout",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 3,
+                  "expectancy": "-0.01928100475518181477165492516",
+                  "win_rate": "0",
+                  "profit_factor": "0",
+                  "max_drawdown": "0.0569034037780736635764355927",
+                  "sharpe": null,
+                  "ending_equity": "0.9430965962219263364235644073",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 3,
+                  "expectancy": "0.01489337564802594420012038462",
+                  "win_rate": "0.6666666666666666666666666667",
+                  "profit_factor": "3.770149798109850698899287026",
+                  "max_drawdown": "0.0161291374836712117671324515",
+                  "sharpe": null,
+                  "ending_equity": "1.044246718762414958983865372",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 6,
+                  "expectancy": "-0.002193814553577935285767270272",
+                  "win_rate": "0.3333333333333333333333333333",
+                  "profit_factor": "0.8220561791132836294109342125",
+                  "max_drawdown": "0.0721147384389194693686364928",
+                  "sharpe": null,
+                  "ending_equity": "0.9848255260807487291744339998",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 5,
+                  "expectancy": "-0.007166114689463452977389802564",
+                  "win_rate": "0.2",
+                  "profit_factor": "0.7030238209644653068845049538",
+                  "max_drawdown": "0.1158420235113409397839205553",
+                  "sharpe": null,
+                  "ending_equity": "0.9591529323153273303034757495",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "breakout",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "breakout"
+        },
+        "momentum": {
+          "splits": {
+            "train": {
+              "trades": 13,
+              "expectancy": "-0.01920490692173910636825626878",
+              "win_rate": "0.1538461538461538461538461538",
+              "profit_factor": "0.2789807490589594096379938114",
+              "max_drawdown": "0.2314043874567522564731172506",
+              "sharpe": null,
+              "ending_equity": "0.7685956125432477435268827494",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 210
+            },
+            "validation": {
+              "trades": 4,
+              "expectancy": "0.04199577562820208316383197388",
+              "win_rate": "0.25",
+              "profit_factor": "1.982359277086518946776541182",
+              "max_drawdown": "0.1615356860742771204108563899",
+              "sharpe": null,
+              "ending_equity": "1.122689263442332492263056493",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 70
+            },
+            "test": {
+              "trades": 2,
+              "expectancy": "0.02090361994953886319188660538",
+              "win_rate": "1",
+              "profit_factor": null,
+              "max_drawdown": "0",
+              "sharpe": null,
+              "ending_equity": "1.041990478858556571118292911",
+              "sharpe_sample_sufficient": false,
+              "strategy": "momentum",
+              "bars": 70
+            }
+          },
+          "overfit_warning": "too_few_trades",
+          "walk_forward": {
+            "folds": [
+              {
+                "in_sample": {
+                  "trades": 8,
+                  "expectancy": "-0.02202481761301980271055247732",
+                  "win_rate": "0.25",
+                  "profit_factor": "0.3541105246358225332453547480",
+                  "max_drawdown": "0.1706797295595149916607863597",
+                  "sharpe": null,
+                  "ending_equity": "0.8293202704404850083392136403",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "out_of_sample": {
+                  "trades": 5,
+                  "expectancy": "-0.00311670929204258684695463999",
+                  "win_rate": "0.2",
+                  "profit_factor": "0.8009191269630307763760546855",
+                  "max_drawdown": "0.0769640165902995767785317498",
+                  "sharpe": null,
+                  "ending_equity": "0.9809047279659739444718807682",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              },
+              {
+                "in_sample": {
+                  "trades": 14,
+                  "expectancy": "-0.01718511711473623208445680244",
+                  "win_rate": "0.2142857142857142857142857143",
+                  "profit_factor": "0.3983507124841396979305873167",
+                  "max_drawdown": "0.2727853699350823728817015055",
+                  "sharpe": null,
+                  "ending_equity": "0.7728065662637176136185967976",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 232
+                },
+                "out_of_sample": {
+                  "trades": 5,
+                  "expectancy": "0.06301675949382229606512106894",
+                  "win_rate": "0.6",
+                  "profit_factor": "3.827185909007772158304189077",
+                  "max_drawdown": "0.1084884514403902180343927022",
+                  "sharpe": null,
+                  "ending_equity": "1.286334956821271799368841890",
+                  "sharpe_sample_sufficient": false,
+                  "strategy": "momentum",
+                  "bars": 116
+                },
+                "overfit": "too_few_trades"
+              }
+            ],
+            "warning": null
+          },
+          "strategy": "momentum"
+        }
+      }
+    }
+  }
+}

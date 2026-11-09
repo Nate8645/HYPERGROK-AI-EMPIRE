@@ -339,7 +339,6 @@ def test_each_missing_live_condition_rejects_and_full_gate_calls_once() -> None:
 
 def test_unknown_outcome_is_not_retried() -> None:
     fake = FakeCoinbase()
-    fake.created = Boom(504, "gateway timeout")
     fake.orders = {"orders": [{"order_id": "ord-9", "client_order_id": "c9", "product_id": "BTC-USD", "status": "OPEN", "side": "BUY"}]}
     app = _app(
         fake,
@@ -347,6 +346,24 @@ def test_unknown_outcome_is_not_retried() -> None:
         coinbase_live_enabled=True,
         coinbase_max_capital=Decimal("1000"),
     )
+    passed = app.state.orchestrator.risk_manager.run(
+        OrderIntent(
+            client_order_id="c9",
+            venue="coinbase",
+            symbol="BTC-USD",
+            side="buy",
+            notional=Decimal("50"),
+            notional_currency="USD",
+            leverage=Decimal("1"),
+            entry_price=Decimal("100"),
+            stop_price=Decimal("99.5"),
+            market_data_time=datetime.now(timezone.utc),
+        ),
+        now=datetime.now(timezone.utc),
+        case_id="case-c9",
+    )
+    assert passed.status == "PASS"
+    fake.created = Boom(504, "gateway timeout")
     broker = app.state.coinbase.broker
     prepared = {"client_order_id": "c9", "product_id": "BTC-USD", "side": "buy", "order_type": "market", "quote_size": "50", "base_size": None}
     first = broker.submit(prepared)
@@ -527,17 +544,47 @@ def test_portfolio_endpoint_and_agents_stay_rule_based(client) -> None:
     assert result.execution.status == "recorded"
 
 
+def test_http_order_goes_through_risk_manager(monkeypatch) -> None:
+    from hypergrok.agents.risk_manager import RiskManager
+
+    seen: list[str] = []
+    original = RiskManager.run
+
+    def spy(self, order, *, now, case_id):
+        seen.append(order.client_order_id)
+        return original(self, order, now=now, case_id=case_id)
+
+    monkeypatch.setattr(RiskManager, "run", spy)
+    fake = FakeCoinbase()
+    app = _app(fake)
+    with TestClient(app) as client:
+        body = client.post("/api/coinbase/orders", json=_order(client_order_id="via-risk")).json()
+    assert body["transmitted"] is False
+    assert seen == ["via-risk"]
+    assert "market_order" not in fake.calls
+
+
+def test_pages_build_has_no_private_desk_data() -> None:
+    root = __import__("pathlib").Path(__file__).resolve().parents[2]
+    pages = (root / ".github/workflows/pages.yml").read_text(encoding="utf-8")
+    assert 'VITE_BACKEND_URL: ""' in pages
+    monitor = "\n".join(path.read_text(encoding="utf-8") for path in (root / "monitor/src").rglob("*") if path.suffix in {".ts", ".tsx", ".json"})
+    assert "/api/coinbase/balances" not in monitor
+    assert "COINBASE_API_PRIVATE_KEY" not in monitor
+    assert "BEGIN PRIVATE KEY" not in monitor
+
+
 def test_execution_trader_cannot_bypass_risk_or_gate(app) -> None:
     events: list[str] = []
     trader = app.state.orchestrator.trader
-    real_engine = trader.engine
+    real_manager = trader.risk_manager
     real_gate = trader.gate
     real_adapter = trader.adapter
 
-    class Engine:
-        def evaluate(self, *args, **kwargs):
+    class Manager:
+        def run(self, order, *, now, case_id):
             events.append("risk")
-            return real_engine.evaluate(*args, **kwargs)
+            return real_manager.run(order, now=now, case_id=case_id)
 
     class Gate:
         def authorize(self, **kwargs):
@@ -558,7 +605,7 @@ def test_execution_trader_cannot_bypass_risk_or_gate(app) -> None:
             events.append("coinbase")
             raise AssertionError("coinbase transmit")
 
-    trader.engine = Engine()
+    trader.risk_manager = Manager()
     trader.gate = Gate()
     trader.adapter = Adapter()
     trader.coinbase = Coinbase()

@@ -1,4 +1,4 @@
-import { checklistProgress, formatZurich, loadGithub, mapAgents, NETWORK_INTERVAL_MS } from "./model";
+import { backtestLines, checklistProgress, formatZurich, loadGithub, mapAgents, NETWORK_INTERVAL_MS } from "./model";
 
 test("agents without telemetry stay offline and do not imply work", () => {
   const cards = mapAgents(null);
@@ -26,6 +26,11 @@ test("zurich timestamps and missing values", () => {
   expect(formatZurich(null)).toBe("Keine Daten");
   expect(formatZurich("not-a-date")).toBe("Keine Daten");
   expect(formatZurich("2026-11-09T18:00:00Z")).toContain("19:00:00");
+});
+
+test("missing backtests stay Keine Daten", () => {
+  expect(backtestLines(null)).toEqual(["Keine Daten"]);
+  expect(backtestLines({ available: false })).toEqual(["Keine Daten"]);
 });
 
 test("checklist progress is the count of committed items", () => {

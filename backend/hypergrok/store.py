@@ -15,6 +15,10 @@ from hypergrok.domain import AccountState, AccountUpdate, KillSwitchState
 from hypergrok.errors import DeskError
 from hypergrok.logging_config import redact
 from hypergrok.models import (
+    AgentMessageRow,
+    BlackboardRow,
+    CandleCacheRow,
+    DecisionLogRow,
     AgentEventRow,
     ApprovalRow,
     ClientOrderRow,
@@ -457,6 +461,71 @@ class DeskStore:
             session.commit()
             session.refresh(row)
             return int(row.id)
+        finally:
+            session.close()
+
+    def put_blackboard(self, key: str, payload: dict, source: str, now: datetime) -> None:
+        session = self._session()
+        try:
+            row = session.get(BlackboardRow, key)
+            if row is None:
+                session.add(BlackboardRow(key=key, updated_at=isoformat(now), source=source, payload_json=redact(to_jsonable(payload))))
+            else:
+                row.updated_at = isoformat(now)
+                row.source = source
+                row.payload_json = redact(to_jsonable(payload))
+            session.commit()
+        finally:
+            session.close()
+
+    def add_agent_message(self, *, case_id: str, from_agent: str, to_agent: str, schema_name: str, body: dict, now: datetime) -> int:
+        session = self._session()
+        try:
+            row = AgentMessageRow(
+                created_at=isoformat(now),
+                case_id=case_id,
+                from_agent=from_agent,
+                to_agent=to_agent,
+                schema_name=schema_name,
+                body_json=redact(to_jsonable(body)),
+            )
+            session.add(row)
+            session.commit()
+            session.refresh(row)
+            return int(row.id)
+        finally:
+            session.close()
+
+    def add_decision_log(self, *, case_id: str | None, stage: str, decision: str, reasons: list[str], now: datetime) -> int:
+        session = self._session()
+        try:
+            row = DecisionLogRow(
+                created_at=isoformat(now),
+                case_id=case_id,
+                stage=stage,
+                decision=decision,
+                reasons_json=reasons,
+            )
+            session.add(row)
+            session.commit()
+            session.refresh(row)
+            return int(row.id)
+        finally:
+            session.close()
+
+    def cache_candles(self, *, product_id: str, granularity: str, candles: list, source: str, now: datetime) -> None:
+        session = self._session()
+        try:
+            session.add(
+                CandleCacheRow(
+                    product_id=product_id,
+                    granularity=granularity,
+                    fetched_at=isoformat(now),
+                    source=source,
+                    payload_json=candles,
+                )
+            )
+            session.commit()
         finally:
             session.close()
 

@@ -58,7 +58,7 @@ class Orchestrator:
         self.strategist = Strategist(settings, engine)
         self.risk_manager = RiskManager(risk_service)
         self.coinbase = None
-        self.trader = ExecutionTrader(gate, adapter, store, engine)
+        self.trader = ExecutionTrader(gate, adapter, store, engine, self.risk_manager)
         self.reviewer = TradeReviewer(store)
 
     def run(self, idea: DeskIdea, now: datetime | None = None) -> DeskRunResult:

@@ -34,7 +34,10 @@ jobs:
       - run: npm test
       - run: npm run build
         env:
+          # Public site only. Do not set VITE_BACKEND_URL here: that would point
+          # every visitor at a private desk and could expose balances.
           VITE_BASE: /HYPERGROK-AI-EMPIRE/
+          VITE_BACKEND_URL: ""
       - uses: actions/upload-pages-artifact@v3
         with:
           path: monitor/dist
