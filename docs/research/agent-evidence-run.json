@@ -1,0 +1,361 @@
+{
+  "label": "SIMULATED",
+  "real_trade": false,
+  "implementation": "rule_based",
+  "order": [
+    "desk_lead",
+    "market_analyst",
+    "research_analyst",
+    "strategist",
+    "risk_manager",
+    "execution_trader",
+    "trade_reviewer"
+  ],
+  "decision": "NO TRADE",
+  "decision_reasons": [
+    "100 percent of the balance violates the 1 percent planned-loss budget",
+    "no intraday strategy met the robust-screen rule",
+    "a size that clears the product minimum is not a buy signal"
+  ],
+  "cases": [
+    {
+      "product_id": "BTC-USDC",
+      "case_id": "2dbc1346ca9b4b3fa843fc9be1cbdd45",
+      "label": "SIMULATED",
+      "implementation": "rule_based",
+      "outcome": "no_trade",
+      "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied.",
+      "transmitted": false,
+      "agents": [
+        {
+          "agent": "desk_lead",
+          "status": "accepted",
+          "summary": "case opened for BTC-USDC on coinbase",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "market_analyst",
+          "status": "completed",
+          "summary": "completed bias=long spread_bps=0.001333547501062003891158253349 source=coinbase_public_product_book",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "research_analyst",
+          "status": "completed",
+          "summary": "completed stance=support_short",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "strategist",
+          "status": "no_trade",
+          "summary": "no trade: research supports short",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "risk_manager",
+          "status": "skipped",
+          "summary": "no order proposed",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "execution_trader",
+          "status": "skipped",
+          "summary": "skipped: no_order",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "trade_reviewer",
+          "status": "completed",
+          "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied.",
+          "implementation": "rule_based"
+        }
+      ],
+      "risk_status": null,
+      "strategy_status": "no_trade",
+      "messages": [
+        {
+          "from": "desk_lead",
+          "to": "market_analyst",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "market_analyst",
+          "to": "research_analyst",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "research_analyst",
+          "to": "strategist",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "strategist",
+          "to": "risk_manager",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "risk_manager",
+          "to": "execution_trader",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "execution_trader",
+          "to": "trade_reviewer",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        }
+      ],
+      "decision_log": {
+        "stage": "risk_manager",
+        "decision": "NO TRADE",
+        "reasons": [
+          "simulated",
+          "Case 2dbc1346ca9b4b3fa843fc9be1cbdd45 BTC-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+        ]
+      }
+    },
+    {
+      "product_id": "ETH-USDC",
+      "case_id": "20347c9dda0146d186d7f7d1569adad1",
+      "label": "SIMULATED",
+      "implementation": "rule_based",
+      "outcome": "no_trade",
+      "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied.",
+      "transmitted": false,
+      "agents": [
+        {
+          "agent": "desk_lead",
+          "status": "accepted",
+          "summary": "case opened for ETH-USDC on coinbase",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "market_analyst",
+          "status": "completed",
+          "summary": "completed bias=neutral spread_bps=0.2351884212036473020360261624 source=coinbase_public_product_book",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "research_analyst",
+          "status": "completed",
+          "summary": "completed stance=support_short",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "strategist",
+          "status": "no_trade",
+          "summary": "no trade: market bias is neutral",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "risk_manager",
+          "status": "skipped",
+          "summary": "no order proposed",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "execution_trader",
+          "status": "skipped",
+          "summary": "skipped: no_order",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "trade_reviewer",
+          "status": "completed",
+          "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied.",
+          "implementation": "rule_based"
+        }
+      ],
+      "risk_status": null,
+      "strategy_status": "no_trade",
+      "messages": [
+        {
+          "from": "desk_lead",
+          "to": "market_analyst",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "market_analyst",
+          "to": "research_analyst",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "research_analyst",
+          "to": "strategist",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "strategist",
+          "to": "risk_manager",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "risk_manager",
+          "to": "execution_trader",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "execution_trader",
+          "to": "trade_reviewer",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        }
+      ],
+      "decision_log": {
+        "stage": "risk_manager",
+        "decision": "NO TRADE",
+        "reasons": [
+          "simulated",
+          "Case 20347c9dda0146d186d7f7d1569adad1 ETH-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+        ]
+      }
+    },
+    {
+      "product_id": "SOL-USDC",
+      "case_id": "a054d5e220614257a1735af5562f9061",
+      "label": "SIMULATED",
+      "implementation": "rule_based",
+      "outcome": "no_trade",
+      "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied.",
+      "transmitted": false,
+      "agents": [
+        {
+          "agent": "desk_lead",
+          "status": "accepted",
+          "summary": "case opened for SOL-USDC on coinbase",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "market_analyst",
+          "status": "completed",
+          "summary": "completed bias=neutral spread_bps=2.314011338655559412241119981 source=coinbase_public_product_book",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "research_analyst",
+          "status": "completed",
+          "summary": "completed stance=support_short",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "strategist",
+          "status": "no_trade",
+          "summary": "no trade: market bias is neutral",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "risk_manager",
+          "status": "skipped",
+          "summary": "no order proposed",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "execution_trader",
+          "status": "skipped",
+          "summary": "skipped: no_order",
+          "implementation": "rule_based"
+        },
+        {
+          "agent": "trade_reviewer",
+          "status": "completed",
+          "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied.",
+          "implementation": "rule_based"
+        }
+      ],
+      "risk_status": null,
+      "strategy_status": "no_trade",
+      "messages": [
+        {
+          "from": "desk_lead",
+          "to": "market_analyst",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "market_analyst",
+          "to": "research_analyst",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "research_analyst",
+          "to": "strategist",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "strategist",
+          "to": "risk_manager",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "risk_manager",
+          "to": "execution_trader",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        },
+        {
+          "from": "execution_trader",
+          "to": "trade_reviewer",
+          "body": {
+            "label": "SIMULATED",
+            "summary": "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+          }
+        }
+      ],
+      "decision_log": {
+        "stage": "risk_manager",
+        "decision": "NO TRADE",
+        "reasons": [
+          "simulated",
+          "Case a054d5e220614257a1735af5562f9061 SOL-USDC coinbase. Outcome no_trade. Desk lead accepted. Market completed. Research support_short. Strategy no_trade. Risk not_run. Execution skipped transmitted=False. Rule-based review. No exchange fill is implied."
+        ]
+      }
+    }
+  ]
+}

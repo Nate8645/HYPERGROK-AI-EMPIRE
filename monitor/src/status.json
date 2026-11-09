@@ -1,0 +1,52 @@
+{
+  "items": [
+    {
+      "id": "phase1-backend",
+      "label": "Phase 1 desk backend",
+      "done": true,
+      "evidence": "commit cd78a36530e33770cb70ca281f8211c45e20e8dd"
+    },
+    {
+      "id": "phase2-coinbase",
+      "label": "Coinbase spot adapter",
+      "done": true,
+      "evidence": "commit e94414374d3be46c4ebe576251925b81115ead2d"
+    },
+    {
+      "id": "phase2-dashboard",
+      "label": "Desk dashboard in frontend/",
+      "done": true,
+      "evidence": "frontend/src/App.tsx"
+    },
+    {
+      "id": "hyperliquid-orders",
+      "label": "Hyperliquid order adapter",
+      "done": false,
+      "evidence": "not present in the repository"
+    },
+    {
+      "id": "solana-adapters",
+      "label": "Solana / Pump.fun adapters",
+      "done": false,
+      "evidence": "not present in the repository"
+    },
+    {
+      "id": "wallet-signing",
+      "label": "Wallet signing isolation",
+      "done": false,
+      "evidence": "not present in the repository"
+    },
+    {
+      "id": "phase3-indicators",
+      "label": "Rule-based indicators and backtests",
+      "done": true,
+      "evidence": "docs/research/backtests/public-candles.json"
+    },
+    {
+      "id": "github-pages",
+      "label": "GitHub Pages deploy from main",
+      "done": false,
+      "evidence": "workflow is on the PR branch; Pages publishes the default branch only"
+    }
+  ]
+}

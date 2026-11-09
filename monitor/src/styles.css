@@ -1,0 +1,23 @@
+:root { color-scheme: dark; background: #07090d; color: #d7ecff; font-family: "Segoe UI", sans-serif; }
+body { margin: 0; }
+main { max-width: 980px; margin: 0 auto; padding: max(12px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom)); }
+h1, h2, p { margin: 0 0 6px; }
+h1 { font-size: 1.4rem; letter-spacing: 0.08em; }
+.kicker { color: #3ec6ff; font-size: 0.75rem; letter-spacing: 0.2em; }
+.card { background: #10151d; border: 1px solid #1e4d66; border-radius: 10px; padding: 10px; }
+.grid, .agents { display: grid; gap: 8px; margin: 8px 0; }
+.agents { grid-template-columns: 1fr 1fr; }
+.tag { color: #3ec6ff; font-size: 0.72rem; text-transform: uppercase; }
+.bar { height: 6px; background: #1a2430; border-radius: 99px; overflow: hidden; }
+.bar span { display: block; height: 100%; background: #3ec6ff; }
+.live { box-shadow: 0 0 0 1px #3ec6ff; }
+a { color: #8fd8ff; }
+ul { margin: 0; padding-left: 16px; }
+@media (min-width: 900px) {
+  .grid { grid-template-columns: 1fr 1fr; }
+  .agents { grid-template-columns: repeat(4, 1fr); }
+}
+@media (max-width: 700px) {
+  .agents { grid-template-columns: 1fr; }
+  body { font-size: 16px; }
+}

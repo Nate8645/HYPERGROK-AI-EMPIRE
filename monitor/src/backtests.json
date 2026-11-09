@@ -1,0 +1,58 @@
+{
+  "available": true,
+  "source": "https://api.exchange.coinbase.com/products/{product_id}/candles",
+  "fetched_at": "2026-11-09T20:23:32.097036+00:00",
+  "products": {
+    "BTC-USD": {
+      "bars": 350,
+      "start": "2025-11-25T00:00:00+00:00",
+      "end": "2026-11-09T00:00:00+00:00",
+      "test_expectancy": {
+        "ema_cross": "-0.07023694374588768838518796460",
+        "mean_reversion": "-0.00785098958953592493304396560",
+        "breakout": "-0.01744014088240637471449113883",
+        "momentum": "-0.0218693883033113078349739345"
+      },
+      "overfit_warning": {
+        "ema_cross": "too_few_trades",
+        "mean_reversion": "too_few_trades",
+        "breakout": "too_few_trades",
+        "momentum": "too_few_trades"
+      }
+    },
+    "ETH-USD": {
+      "bars": 350,
+      "start": "2025-11-25T00:00:00+00:00",
+      "end": "2026-11-09T00:00:00+00:00",
+      "test_expectancy": {
+        "ema_cross": "-0.1205621744854484158477215489",
+        "mean_reversion": "-0.03648640716269633184917370053",
+        "breakout": "-0.02081106720668689639522969411",
+        "momentum": "-0.04050669261554290322522067997"
+      },
+      "overfit_warning": {
+        "ema_cross": "too_few_trades",
+        "mean_reversion": "too_few_trades",
+        "breakout": "too_few_trades",
+        "momentum": "too_few_trades"
+      }
+    },
+    "SOL-USD": {
+      "bars": 350,
+      "start": "2025-11-25T00:00:00+00:00",
+      "end": "2026-11-09T00:00:00+00:00",
+      "test_expectancy": {
+        "ema_cross": "-0.08688507877935555140535217470",
+        "mean_reversion": "-0.0570479307493238834742797367",
+        "breakout": "-0.01735843974247741918305643300",
+        "momentum": "0.02090361994953886319188660538"
+      },
+      "overfit_warning": {
+        "ema_cross": "too_few_trades",
+        "mean_reversion": "too_few_trades",
+        "breakout": "too_few_trades",
+        "momentum": "too_few_trades"
+      }
+    }
+  }
+}

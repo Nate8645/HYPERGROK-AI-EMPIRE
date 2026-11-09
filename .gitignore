@@ -218,3 +218,14 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# HYPERGROK local runtime
+data/
+*.sqlite3
+*.db
+*.sqlite
+.env
+!.env.example
+node_modules/
+frontend/dist/
+dist/

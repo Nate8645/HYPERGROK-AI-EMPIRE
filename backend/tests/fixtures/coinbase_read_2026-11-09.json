@@ -1,0 +1,77 @@
+{
+  "read_at": "2026-11-09T20:37:29.751052Z",
+  "local_time": "2026-11-09T21:37:29+01:00",
+  "timezone": "Europe/Zurich",
+  "source": "coinbase_advanced_trade_read",
+  "note": "Snapshot for tests and documentation. Production code must read the API again. These numbers are not live defaults. Account identifiers from the read were omitted.",
+  "balances": [
+    {"currency": "USDC", "available": "10.896768", "hold": "0"},
+    {"currency": "BTC", "available": "0", "hold": "0"},
+    {"currency": "CHF", "available": "0", "hold": "0"},
+    {"currency": "EUR", "available": "0", "hold": "0"}
+  ],
+  "usd_account_returned": false,
+  "crypto_available": "0",
+  "fee_tier": {
+    "pricing_tier": "Intro",
+    "maker_fee_rate": "0.0009",
+    "taker_fee_rate": "0.001"
+  },
+  "fee_endpoint_total_balance": "10.90",
+  "products": {
+    "BTC-USDC": {
+      "product_id": "BTC-USDC",
+      "product_type": "SPOT",
+      "base_currency_id": "BTC",
+      "quote_currency_id": "USDC",
+      "base_increment": "0.00000001",
+      "quote_increment": "0.01",
+      "base_min_size": "0.00000001",
+      "quote_min_size": "1",
+      "status": "online",
+      "price_at_read": "74645.68"
+    },
+    "ETH-USDC": {
+      "product_id": "ETH-USDC",
+      "product_type": "SPOT",
+      "base_currency_id": "ETH",
+      "quote_currency_id": "USDC",
+      "base_increment": "0.00000001",
+      "quote_increment": "0.01",
+      "base_min_size": "0.00000001",
+      "quote_min_size": "1",
+      "status": "online",
+      "price_at_read": "2124.42"
+    },
+    "SOL-USDC": {
+      "product_id": "SOL-USDC",
+      "product_type": "SPOT",
+      "base_currency_id": "SOL",
+      "quote_currency_id": "USDC",
+      "base_increment": "0.00000001",
+      "quote_increment": "0.01",
+      "base_min_size": "0.00000001",
+      "quote_min_size": "1",
+      "status": "online",
+      "price_at_read": "86.71"
+    }
+  },
+  "btc_usdc_book": {
+    "product_id": "BTC-USDC",
+    "time": "2026-11-09T20:37:29.751052Z",
+    "bids": [
+      {"price": "74699.09", "size": "0.0100081"},
+      {"price": "74697.59", "size": "0.02677462"},
+      {"price": "74697.34", "size": "0.00009451"},
+      {"price": "74697.31", "size": "0.15300051"},
+      {"price": "74697.22", "size": "0.00535481"}
+    ],
+    "asks": [
+      {"price": "74699.1", "size": "0.05145717"},
+      {"price": "74700.6", "size": "0.02677354"},
+      {"price": "74700.97", "size": "0.00535481"},
+      {"price": "74701.8", "size": "0.11183152"},
+      {"price": "74701.81", "size": "0.10709246"}
+    ]
+  }
+}
