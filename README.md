@@ -122,6 +122,25 @@ npm test
 npm run dev
 ```
 
+## HYPERGROK LIVE CONTROL
+
+`monitor/` is a separate read-only page. It does not place orders, toggle the kill switch, or show keys. GitHub Pages cannot password-protect a public site; the page only shows data that is already public, plus desk telemetry if you point it at your own backend. There is no client-side password.
+
+```bash
+cd monitor
+npm install
+npm test
+npm run dev
+```
+
+Optional: `VITE_BACKEND_URL=http://127.0.0.1:8000 npm run dev`. Without that URL the page says `Backend nicht verbunden` and `Keine Daten`. Cursor agent status has no public unauthenticated endpoint, so the card stays `Nicht verfügbar` and links to the agent run.
+
+GitHub data uses the public REST API. The page re-reads its cache about every 90 seconds and calls GitHub at most every 4 minutes, because one refresh is four requests and unauthenticated traffic is limited to 60 requests per hour. A 403 or 429 keeps the cache and does not invent commits.
+
+`.github/workflows/pages.yml` deploys `monitor/dist` with GitHub Actions. Pages only publishes the default branch, so the site is not live from this pull request. This environment cannot enable Pages or merge to `main`.
+
+Timestamps use `Europe/Zurich`. Checklist progress is the count of items in `monitor/src/status.json`, not an estimated project percentage.
+
 ## Setup
 
 Python 3.11 or newer.
