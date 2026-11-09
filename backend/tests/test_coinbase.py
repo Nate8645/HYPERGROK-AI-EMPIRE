@@ -61,6 +61,7 @@ class FakeCoinbase:
         self.created = {"success": True, "success_response": {"order_id": "ord-1", "client_order_id": "c1", "product_id": "BTC-USD", "side": "BUY", "status": "OPEN"}}
         self.orders = {"orders": []}
         self.fills = {"fills": []}
+        self.permissions = {"can_view": True, "can_trade": True, "can_transfer": False}
 
     def _hit(self, name: str):
         self.calls.append(name)
@@ -129,6 +130,10 @@ class FakeCoinbase:
     def get_fills(self, **kwargs):
         self._hit("get_fills")
         return self.fills
+
+    def get_api_key_permissions(self, **kwargs):
+        self._hit("get_api_key_permissions")
+        return self.permissions
 
     def cancel_orders(self, order_ids):
         self._hit("cancel_orders")
@@ -653,3 +658,105 @@ def test_execution_trader_cannot_bypass_risk_or_gate(app) -> None:
     assert events == ["risk", "gate"]
     assert "coinbase" not in events
     assert "dry" not in events
+
+
+def test_base_minimum_and_increments() -> None:
+    product = FakeCoinbase().product
+    with pytest.raises(Exception) as caught:
+        prepare_order_sizes(product, {"side": "sell", "order_type": "market", "base_size": "0.000001"})
+    assert caught.value.code == "min_size"
+    rounded = prepare_order_sizes(
+        product,
+        {"side": "sell", "order_type": "limit", "base_size": "0.100000019", "limit_price": "100.019"},
+    )
+    assert rounded["base_size"] == "0.10000001"
+    assert rounded["limit_price"] == "100.01"
+
+
+def test_transfer_permission_refuses_to_arm() -> None:
+    fake = FakeCoinbase()
+    fake.permissions = {"can_view": True, "can_trade": True, "can_transfer": True}
+    app = _app(fake, live_trading_enabled=True, coinbase_live_enabled=True, coinbase_max_capital=Decimal("1000"))
+    assert app.state.coinbase.live_armed() is True
+    checked = app.state.coinbase.check_key_permissions()
+    assert checked["reason"] == "transfer_permission"
+    assert checked["can_transfer"] is True
+    assert app.state.coinbase.live_armed() is False
+    with TestClient(app) as client:
+        token = client.post("/api/approvals", json={"client_order_id": "xfer"}).json()["token"]
+        blocked = client.post(
+            "/api/coinbase/orders",
+            json=_order(client_order_id="xfer", request_live=True, approval_token=token),
+        ).json()
+    assert blocked["reason"] == "transfer_permission"
+    assert blocked["transmitted"] is False
+    assert "market_order" not in fake.calls
+    assert SECRET not in str(checked)
+
+
+def test_restart_reconciles_and_does_not_resend(tmp_path) -> None:
+    from hypergrok.venues.coinbase.broker import CoinbaseBroker
+
+    database = tmp_path / "desk.sqlite"
+    fake = FakeCoinbase()
+    fake.orders = {"orders": []}
+    fake.created = Boom(504, "gateway timeout")
+    app = _app(
+        fake,
+        database_url=f"sqlite:///{database}",
+        live_trading_enabled=True,
+        coinbase_live_enabled=True,
+        coinbase_max_capital=Decimal("1000"),
+    )
+    now = datetime.now(timezone.utc)
+    passed = app.state.orchestrator.risk_manager.run(
+        OrderIntent(
+            client_order_id="restart-1",
+            venue="coinbase",
+            symbol="BTC-USD",
+            side="buy",
+            notional=Decimal("50"),
+            notional_currency="USD",
+            leverage=Decimal("1"),
+            entry_price=Decimal("100"),
+            stop_price=Decimal("99.5"),
+            market_data_time=now,
+        ),
+        now=now,
+        case_id="case-restart",
+    )
+    assert passed.status == "PASS"
+    prepared = {
+        "client_order_id": "restart-1",
+        "product_id": "BTC-USD",
+        "side": "buy",
+        "order_type": "market",
+        "quote_size": "50",
+        "base_size": None,
+    }
+    first = app.state.coinbase.broker.submit(prepared)
+    assert first["status"] == "unknown"
+    assert first["retried"] is False
+    assert fake.calls.count("market_order") == 1
+
+    restarted = CoinbaseBroker(fake, clock=app.state.coinbase.clock, store=app.state.store)
+    second = restarted.submit(prepared)
+    assert fake.calls.count("market_order") == 1
+    assert second["retried"] is False
+    assert second["status"] == "unknown"
+
+    fake.orders = {
+        "orders": [
+            {
+                "order_id": "ord-restart",
+                "client_order_id": "restart-1",
+                "product_id": "BTC-USD",
+                "status": "OPEN",
+                "side": "BUY",
+            }
+        ]
+    }
+    reconciled = CoinbaseBroker(fake, clock=app.state.coinbase.clock, store=app.state.store).submit(prepared)
+    assert fake.calls.count("market_order") == 1
+    assert reconciled["reconciled"] is True
+    assert reconciled["order_id"] == "ord-restart"

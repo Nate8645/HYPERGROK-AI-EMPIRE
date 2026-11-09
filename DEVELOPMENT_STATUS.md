@@ -1,6 +1,6 @@
 # Development status
 
-Updated 2026-11-09 after Phase 5. Phase 6 is not started.
+Updated 2026-11-09 after Phase 6. No later phase is in scope.
 
 ## Phase 1 — desk backend
 
@@ -74,9 +74,40 @@ Updated 2026-11-09 after Phase 5. Phase 6 is not started.
 - `monitor` has the same 6 dev-dependency findings. Production `npm audit --omit=dev` was checked on `frontend` only; `monitor` has no production runtime dependencies beyond Vite, which is a dev dependency there.
 - Secret scan for private-key blocks and common token prefixes: the only hit is the test assertion that the monitor source must not contain `BEGIN PRIVATE KEY`.
 
+## Phase 6 — real-money readiness, technical only
+
+- Status: implemented and tested with a mocked Coinbase client. Deployable for live orders: blocked. `LIVE_TRADING_ENABLED` and `COINBASE_LIVE_ENABLED` stay false in the default configuration. The product allowlist default is empty and the capital cap default is 0. No live write call was made.
+- Risk Manager remains the only path that records a pass the broker will accept.
+- The execution gate still requires the live flags, a non-empty allowlist, a capital cap above 0, and a one-time approval token. The kill switch blocks new orders and, when the live flags and a client are present, cancels open spot orders.
+- Duplicate protection is the `client_order_id`. A second evaluation is rejected.
+- Stale market data is rejected by the risk engine.
+- Capital cap 0 is rejected with `capital_cap_exceeded`.
+- Product `base_min_size`, `quote_min_size`, `base_increment`, and `quote_increment` are enforced by `prepare_order_sizes`.
+- A live place writes `dispatch_started` to SQLite before the network call. A new broker loaded from that database reconciles the id and does not call `market_order` again, including when the first result was unknown.
+- `check_key_permissions` reads the mocked `get_api_key_permissions` response (the SDK method for `GET /api/v3/brokerage/key_permissions`). `can_transfer: true` rejects the order and clears `live_armed`.
+
+### Tests actually run for this phase
+
+- Full pytest: 75 passed, 1 warning (`StarletteDeprecationWarning` about httpx).
+- Frontend vitest: 5 passed. Monitor vitest: 9 passed.
+- New cases: `test_base_minimum_and_increments`, `test_transfer_permission_refuses_to_arm`, `test_restart_reconciles_and_does_not_resend`.
+
+### Open bugs
+
+- Node 20 deprecation annotations on GitHub Actions. The jobs use Node 20. This does not fail the suite.
+- Vitest 2.1.9 dev dependencies report 6 npm audit findings. Production `npm audit --omit=dev` in `frontend/` is clean. The fix is a major upgrade to Vitest 5.1.0, which was not applied.
+
+### Blockers for a live desk
+
+- You have not enabled a View+Trade CDP key outside the repo.
+- You have not set the live flags, a product allowlist, or a capital cap, and you should not until you intend to send real spot orders.
+- The key-permission check refuses a transfer-capable key only after it is invoked. It was not called against Coinbase.
+- The API has no authentication.
+- GitHub Pages is not enabled. The workflow deploys only from `main`.
+
 ### Next step
 
-Phase 6, mocked real-money readiness. Resume from `backend/hypergrok/venues/coinbase/broker.py` and `service.py`.
+Your review of pull request 1. Resume from this file, branch `cursor/phase1-desk-backend-716c`. Do not merge from this workspace.
 
 ### Resume point
 

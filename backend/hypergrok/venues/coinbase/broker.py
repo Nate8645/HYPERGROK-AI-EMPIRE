@@ -17,10 +17,11 @@ from hypergrok.venues.coinbase.market import (
 
 
 class CoinbaseBroker:
-    def __init__(self, client, *, clock=utcnow) -> None:
+    def __init__(self, client, *, clock=utcnow, store=None) -> None:
         self.client = client
         self.clock = clock
-        self._attempted: set[str] = set()
+        self.store = store
+        self._attempted: set[str] = store.dispatched_client_order_ids() if store is not None else set()
 
     def preview(self, prepared: dict) -> dict:
         side = prepared["side"].upper()
@@ -56,6 +57,8 @@ class CoinbaseBroker:
                 found["retried"] = False
                 return found
             return {"status": "unknown", "retried": False, "reason": "already_attempted", "client_order_id": client_order_id}
+        if self.store is not None:
+            self.store.mark_order_dispatched(client_order_id, self.clock())
         self._attempted.add(client_order_id)
         try:
             raw = self._place_once(prepared)

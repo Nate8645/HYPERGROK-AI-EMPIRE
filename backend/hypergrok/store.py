@@ -529,6 +529,33 @@ class DeskStore:
         finally:
             session.close()
 
+    def mark_order_dispatched(self, client_order_id: str, now: datetime) -> None:
+        """Persist a live place attempt before the network call returns.
+
+        A later process treats this id as already sent and reconciles it.
+        """
+        self.add_attempt(
+            case_id=None,
+            client_order_id=client_order_id,
+            mode="live",
+            status="dispatch_started",
+            reason="outcome_unknown_until_reconciled",
+            transmitted=False,
+            payload={"client_order_id": client_order_id},
+            now=now,
+            venue="coinbase",
+        )
+
+    def dispatched_client_order_ids(self) -> set[str]:
+        session = self._session()
+        try:
+            rows = session.scalars(
+                select(ExecutionAttemptRow.client_order_id).where(ExecutionAttemptRow.status == "dispatch_started")
+            ).all()
+            return set(rows)
+        finally:
+            session.close()
+
     def list_attempts(self, limit: int = 50) -> list[dict]:
         session = self._session()
         try:

@@ -115,6 +115,8 @@ CHF notionals are not converted with a guessed rate. Set both `HYPERGROK_FX_USD_
 
 The kill switch still blocks new orders. When Coinbase live flags and credentials are present it also cancels open spot orders. It does not withdraw.
 
+Before a live spot submit, the desk can read `GET /api/v3/brokerage/key_permissions`. If `can_transfer` is true, or View or Trade is missing, that order is rejected and `live_armed` becomes false. The check is not a live call in tests. A client order id is written to SQLite before the place call. After a restart the new process reconciles that id and does not send it again.
+
 ```bash
 cd frontend
 npm install

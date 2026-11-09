@@ -32,6 +32,7 @@ from hypergrok.venues.coinbase.market import (
     public_order,
     snapshot_from_book,
 )
+from hypergrok.venues.coinbase.permissions import assess_key_permissions
 from hypergrok.venues.coinbase.pnl import compute_portfolio
 from hypergrok.venues.coinbase.sdk import SDK_VERSION, build_rest_client
 from hypergrok.domain import OrderIntent
@@ -61,11 +62,12 @@ class CoinbaseService:
         self.public_client = public_client
         self.clock = clock
         self._broker: CoinbaseBroker | None = None
+        self._permission_block: str | None = None
 
     @property
     def broker(self) -> CoinbaseBroker:
         if self._broker is None:
-            self._broker = CoinbaseBroker(self._require_client(), clock=self.clock)
+            self._broker = CoinbaseBroker(self._require_client(), clock=self.clock, store=self.store)
         return self._broker
 
     def adapter(self) -> CoinbaseExecutionAdapter:
@@ -75,6 +77,8 @@ class CoinbaseService:
         return self._client is not None or load_credentials(self.settings) is not None
 
     def live_armed(self) -> bool:
+        if self._permission_block:
+            return False
         return bool(
             self.settings.live_trading_enabled
             and self.settings.coinbase_live_enabled
@@ -82,6 +86,23 @@ class CoinbaseService:
             and self.settings.coinbase_products()
             and self.settings.coinbase_max_capital > 0
         )
+
+    def check_key_permissions(self) -> dict:
+        """Optional read of GET /api/v3/brokerage/key_permissions. A transfer-capable key cannot arm."""
+        try:
+            raw = self._call(lambda client: client.get_api_key_permissions())
+        except CoinbaseFailure as exc:
+            self._permission_block = exc.code
+            return {
+                "can_view": None,
+                "can_trade": None,
+                "can_transfer": None,
+                "arming_allowed": False,
+                "reason": exc.code,
+            }
+        assessed = assess_key_permissions(raw)
+        self._permission_block = None if assessed["arming_allowed"] else assessed["reason"]
+        return assessed
 
     def status(self) -> dict:
         products = sorted(self.settings.coinbase_products())
@@ -108,6 +129,7 @@ class CoinbaseService:
             "conversions_enabled": False,
             "sdk": f"coinbase-advanced-py=={SDK_VERSION}",
             "implementation": "rule_based",
+            "key_permission_block": self._permission_block,
         }
 
     def list_products(self) -> dict:
@@ -255,6 +277,15 @@ class CoinbaseService:
             recorded = self.dry_run.execute({"venue": "coinbase", **prepared, "notional": format(intent.notional, "f")})
             self._journal("dry_run_recorded", "dry run only", recorded.payload, symbol=intent.symbol)
             return {"status": "recorded", "transmitted": False, "payload": recorded.payload, "decision": decision.model_dump(mode="json")}
+        permissions = self.check_key_permissions()
+        if not permissions["arming_allowed"]:
+            self._journal("key_permission_blocked", permissions["reason"], permissions, symbol=intent.symbol)
+            return {
+                "status": "rejected",
+                "reason": permissions["reason"],
+                "decision": decision.model_dump(mode="json"),
+                "transmitted": False,
+            }
         try:
             preview = self.broker.preview(prepared)
         except CoinbaseFailure as exc:
