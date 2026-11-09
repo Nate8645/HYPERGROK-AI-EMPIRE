@@ -149,7 +149,11 @@ Updated 2026-11-09 after the full-capital simulation. The 1% loss rule is unchan
 
 ### Next step
 
-Your review of pull request 1. Resume from this file, `docs/COINBASE_READINESS.md`, and `docs/ACTIVATION_SUMMARY.md`. Do not merge from this workspace. Do not turn autonomous mode on from this workspace.
+`docs/ACTIVATION_SUMMARY.md` is the binding checklist. Every prerequisite there is MISSING. The three live flags stay false. Do not merge from this workspace. Do not turn autonomous mode on from this workspace.
+
+### Resume point
+
+Branch `cursor/phase1-desk-backend-716c`, PR https://github.com/Nate8645/HYPERGROK-AI-EMPIRE/pull/1. Uncommitted working-tree edits add session auth and the audit tests; `test_audit_191ff29.py` passed 9 tests, and `test_api.py` then failed because those tests do not log in. Finish that auth work and get the full suite green before treating authentication as met.
 
 ### Resume point
 
