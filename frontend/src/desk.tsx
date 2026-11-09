@@ -211,6 +211,22 @@ export function UtilizationCard({ rows, backtest }: { rows: UtilizationVariant[]
   );
 }
 
+export function SimulatedTrialCard({ trial }: { trial: { label?: string; decision?: string; order_preview?: string; transmitted?: boolean; kill_switch?: { blocked?: boolean } } | null }) {
+  if (!trial) {
+    return <section className="card"><h2>Simulated trial</h2><p>Keine Daten</p></section>;
+  }
+  return (
+    <section className="card">
+      <h2>Simulated trial</h2>
+      <p className="bad">SIMULATED</p>
+      <p>No order was transmitted. The three live flags stay off.</p>
+      <p>Decision {trial.decision ?? "NO TRADE"}</p>
+      <p>Order preview {trial.order_preview ?? "NOT RUN"}</p>
+      <p>Kill switch {trial.kill_switch?.blocked ? "blocked the next order" : "not confirmed"}</p>
+    </section>
+  );
+}
+
 export function ActivationCard() {
   return (
     <section className="card">

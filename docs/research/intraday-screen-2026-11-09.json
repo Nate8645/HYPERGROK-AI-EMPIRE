@@ -1,0 +1,466 @@
+{
+  "fetched_at": "2026-11-09T21:25:20.197725+00:00",
+  "source": "https://api.exchange.coinbase.com/products/{product}/candles",
+  "note": "Paged backward in 300-bar requests until 80 extra pages or no new bars. The API was still returning data at the earlier probe, so this is the downloaded window, not the first Coinbase print.",
+  "evaluation_window_bars": 2000,
+  "evaluation_note": "Strategy trades use the latest 2000 bars. Stop-overshoot and gap stress use every downloaded bar. The volatility filter stays on because 2000 is the cutoff.",
+  "products": {
+    "BTC-USD": {
+      "series": {
+        "hour": {
+          "downloaded_bars": 36337,
+          "downloaded_start": "2022-09-17T08:00:00+00:00",
+          "downloaded_end": "2026-11-09T21:00:00+00:00",
+          "evaluated_bars": 2000,
+          "evaluated_start": "2026-08-18T14:00:00+00:00",
+          "evaluated_end": "2026-11-09T21:00:00+00:00",
+          "volume_present": true,
+          "full_series_stop_overshoot_share": "0.0005779392338177014531043593131",
+          "full_series_gap_stress_share": "0.1454205195948921180096873624",
+          "outcome": "NO TRADE",
+          "reason": "no_robust_strategy",
+          "regime": "trend",
+          "indicators": {
+            "rsi": "48.85867871730699642503171950",
+            "macd": "-95.61506092358897242239064",
+            "ema_fast": "74735.92592385537790567753558",
+            "atr": "560.6597731010828797372289706",
+            "vwap": "79439.26348837945601667830542",
+            "trend": "down"
+          },
+          "window_gap_stress_share": "0.1035517758879439719859929965",
+          "trade_counts": {
+            "ema_cross": {
+              "fixed_10": 22,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "mean_reversion": {
+              "fixed_10": 34,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "breakout": {
+              "fixed_10": 9,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "momentum": {
+              "fixed_10": 40,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            }
+          },
+          "robust": [],
+          "walk_forward_oos_trades": {
+            "ema_cross": [
+              16,
+              18
+            ],
+            "mean_reversion": [
+              31,
+              44
+            ],
+            "breakout": [
+              27,
+              16
+            ],
+            "momentum": [
+              52,
+              54
+            ]
+          },
+          "fixed_10_expectancy": {
+            "ema_cross": "-0.007260500259575121433185980405",
+            "mean_reversion": "-0.004290948712434121310220078191",
+            "breakout": "-0.002739782045481902643382124953",
+            "momentum": "-0.005073088199843522239534450838"
+          }
+        },
+        "minute15": {
+          "downloaded_bars": 5150,
+          "downloaded_start": "2026-09-17T06:00:00+00:00",
+          "downloaded_end": "2026-11-09T21:15:00+00:00",
+          "evaluated_bars": 2000,
+          "evaluated_start": "2026-10-20T01:30:00+00:00",
+          "evaluated_end": "2026-11-09T21:15:00+00:00",
+          "volume_present": true,
+          "full_series_stop_overshoot_share": "0",
+          "full_series_gap_stress_share": "0.01340066032239269761118663818",
+          "outcome": "NO TRADE",
+          "reason": "no_robust_strategy",
+          "regime": "trend",
+          "indicators": {
+            "rsi": "51.52753319243514705836068290",
+            "macd": "25.49280842497955114080553",
+            "ema_fast": "74738.25874879234153624100740",
+            "atr": "255.9876605823244445824020403",
+            "vwap": "78636.31325061539300549907495",
+            "trend": "up"
+          },
+          "window_gap_stress_share": "0.01550775387693846923461730865",
+          "trade_counts": {
+            "ema_cross": {
+              "fixed_10": 22,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "mean_reversion": {
+              "fixed_10": 30,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "breakout": {
+              "fixed_10": 7,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "momentum": {
+              "fixed_10": 37,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            }
+          },
+          "robust": [],
+          "walk_forward_oos_trades": {
+            "ema_cross": [
+              16,
+              15
+            ],
+            "mean_reversion": [
+              30,
+              37
+            ],
+            "breakout": [
+              23,
+              19
+            ],
+            "momentum": [
+              37,
+              49
+            ]
+          },
+          "fixed_10_expectancy": {
+            "ema_cross": "-0.004955548727194676538131270414",
+            "mean_reversion": "-0.002981720399027767056611901977",
+            "breakout": "-0.004935718213283863622093069914",
+            "momentum": "-0.004458560519749996626934758014"
+          }
+        }
+      }
+    },
+    "ETH-USD": {
+      "series": {
+        "hour": {
+          "downloaded_bars": 36337,
+          "downloaded_start": "2022-09-17T08:00:00+00:00",
+          "downloaded_end": "2026-11-09T21:00:00+00:00",
+          "evaluated_bars": 2000,
+          "evaluated_start": "2026-08-18T14:00:00+00:00",
+          "evaluated_end": "2026-11-09T21:00:00+00:00",
+          "volume_present": true,
+          "full_series_stop_overshoot_share": "0.001651254953764861294583883752",
+          "full_series_gap_stress_share": "0.2261393659180977542932628798",
+          "outcome": "NO TRADE",
+          "reason": "no_robust_strategy",
+          "regime": "trend",
+          "indicators": {
+            "rsi": "43.01582218698816862057682677",
+            "macd": "-13.514088798592870293548113",
+            "ema_fast": "2126.845378247762796637689671",
+            "atr": "20.00454766126372605145848513",
+            "vwap": "2451.414616152647107624134527",
+            "trend": "down"
+          },
+          "window_gap_stress_share": "0.1730865432716358179089544772",
+          "trade_counts": {
+            "ema_cross": {
+              "fixed_10": 22,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "mean_reversion": {
+              "fixed_10": 31,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "breakout": {
+              "fixed_10": 10,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "momentum": {
+              "fixed_10": 46,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            }
+          },
+          "robust": [],
+          "walk_forward_oos_trades": {
+            "ema_cross": [
+              18,
+              19
+            ],
+            "mean_reversion": [
+              33,
+              44
+            ],
+            "breakout": [
+              21,
+              15
+            ],
+            "momentum": [
+              48,
+              60
+            ]
+          },
+          "fixed_10_expectancy": {
+            "ema_cross": "-0.008178191276286253845550739323",
+            "mean_reversion": "-0.005171201335259013082067520158",
+            "breakout": "-0.002225634943812408901936694734",
+            "momentum": "-0.005338784706255568626777100907"
+          }
+        },
+        "minute15": {
+          "downloaded_bars": 5150,
+          "downloaded_start": "2026-09-17T06:00:00+00:00",
+          "downloaded_end": "2026-11-09T21:15:00+00:00",
+          "evaluated_bars": 2000,
+          "evaluated_start": "2026-10-20T01:30:00+00:00",
+          "evaluated_end": "2026-11-09T21:15:00+00:00",
+          "volume_present": true,
+          "full_series_stop_overshoot_share": "0.0001942124684404738784229947563",
+          "full_series_gap_stress_share": "0.03612351912992814138667702466",
+          "outcome": "NO TRADE",
+          "reason": "no_robust_strategy",
+          "regime": "trend",
+          "indicators": {
+            "rsi": "53.22530793575364599031997697",
+            "macd": "1.223452762510169349649532",
+            "ema_fast": "2125.995028661375770812091099",
+            "atr": "8.935206398339158171223709907",
+            "vwap": "2299.569555440578771721295053",
+            "trend": "up"
+          },
+          "window_gap_stress_share": "0.03851925962981490745372686343",
+          "trade_counts": {
+            "ema_cross": {
+              "fixed_10": 23,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "mean_reversion": {
+              "fixed_10": 30,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "breakout": {
+              "fixed_10": 7,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "momentum": {
+              "fixed_10": 45,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            }
+          },
+          "robust": [],
+          "walk_forward_oos_trades": {
+            "ema_cross": [
+              17,
+              17
+            ],
+            "mean_reversion": [
+              31,
+              31
+            ],
+            "breakout": [
+              17,
+              16
+            ],
+            "momentum": [
+              53,
+              58
+            ]
+          },
+          "fixed_10_expectancy": {
+            "ema_cross": "-0.004905329554752933400014469943",
+            "mean_reversion": "-0.004295642328707310123328155653",
+            "breakout": "-0.005119540586965635782925181873",
+            "momentum": "-0.005131967308928247531445915587"
+          }
+        }
+      }
+    },
+    "SOL-USD": {
+      "series": {
+        "hour": {
+          "downloaded_bars": 36335,
+          "downloaded_start": "2022-09-17T08:00:00+00:00",
+          "downloaded_end": "2026-11-09T21:00:00+00:00",
+          "evaluated_bars": 2000,
+          "evaluated_start": "2026-08-18T14:00:00+00:00",
+          "evaluated_end": "2026-11-09T21:00:00+00:00",
+          "volume_present": true,
+          "full_series_stop_overshoot_share": "0.004403588924973853690757967744",
+          "full_series_gap_stress_share": "0.3766169428083888369020751913",
+          "outcome": "NO TRADE",
+          "reason": "no_robust_strategy",
+          "regime": "trend",
+          "indicators": {
+            "rsi": "42.94189851263632424321965050",
+            "macd": "-0.39188773676764429919246687",
+            "ema_fast": "86.62628668486777244755854585",
+            "atr": "0.91755215417564112319271234",
+            "vwap": "103.5162326845379771518385752",
+            "trend": "down"
+          },
+          "window_gap_stress_share": "0.2541270635317658829414707354",
+          "trade_counts": {
+            "ema_cross": {
+              "fixed_10": 15,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "mean_reversion": {
+              "fixed_10": 41,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "breakout": {
+              "fixed_10": 4,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "momentum": {
+              "fixed_10": 43,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            }
+          },
+          "robust": [],
+          "walk_forward_oos_trades": {
+            "ema_cross": [
+              17,
+              17
+            ],
+            "mean_reversion": [
+              34,
+              49
+            ],
+            "breakout": [
+              23,
+              10
+            ],
+            "momentum": [
+              40,
+              60
+            ]
+          },
+          "fixed_10_expectancy": {
+            "ema_cross": "-0.01215684139632598772020157643",
+            "mean_reversion": "-0.004537047111506918225345795476",
+            "breakout": "-0.000371429535975119695981499165",
+            "momentum": "-0.008068109404018840304924086149"
+          }
+        },
+        "minute15": {
+          "downloaded_bars": 5150,
+          "downloaded_start": "2026-09-17T06:00:00+00:00",
+          "downloaded_end": "2026-11-09T21:15:00+00:00",
+          "evaluated_bars": 2000,
+          "evaluated_start": "2026-10-20T01:30:00+00:00",
+          "evaluated_end": "2026-11-09T21:15:00+00:00",
+          "volume_present": true,
+          "full_series_stop_overshoot_share": "0",
+          "full_series_gap_stress_share": "0.05437949116333268595843853175",
+          "outcome": "NO TRADE",
+          "reason": "no_robust_strategy",
+          "regime": "trend",
+          "indicators": {
+            "rsi": "45.78434669909266281589313585",
+            "macd": "-0.06015778460733771817550883",
+            "ema_fast": "86.51521191179926099250026066",
+            "atr": "0.4144974507351955376922700576",
+            "vwap": "96.09246611413135400454912993",
+            "trend": "down"
+          },
+          "window_gap_stress_share": "0.05102551275637818909454727364",
+          "trade_counts": {
+            "ema_cross": {
+              "fixed_10": 22,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "mean_reversion": {
+              "fixed_10": 34,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "breakout": {
+              "fixed_10": 9,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            },
+            "momentum": {
+              "fixed_10": 40,
+              "fixed_25": 0,
+              "fixed_50": 0,
+              "fixed_100": 0
+            }
+          },
+          "robust": [],
+          "walk_forward_oos_trades": {
+            "ema_cross": [
+              12,
+              20
+            ],
+            "mean_reversion": [
+              33,
+              39
+            ],
+            "breakout": [
+              18,
+              19
+            ],
+            "momentum": [
+              53,
+              54
+            ]
+          },
+          "fixed_10_expectancy": {
+            "ema_cross": "-0.006779275966225847597777425036",
+            "mean_reversion": "-0.002495899197409855555891680453",
+            "breakout": "-0.005281655157041579365824459898",
+            "momentum": "-0.00540460871680697497693791043"
+          }
+        }
+      }
+    }
+  },
+  "outcome": "NO TRADE"
+}

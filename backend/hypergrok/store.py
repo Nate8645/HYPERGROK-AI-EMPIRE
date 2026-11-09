@@ -297,6 +297,24 @@ class DeskStore:
         finally:
             session.close()
 
+    def events_for_case(self, case_id: str) -> list[dict]:
+        session = self._session()
+        try:
+            rows = session.scalars(
+                select(AgentEventRow).where(AgentEventRow.case_id == case_id).order_by(AgentEventRow.id)
+            ).all()
+            return [
+                {
+                    "agent": row.agent,
+                    "status": row.status,
+                    "summary": row.summary,
+                    "at": row.created_at,
+                }
+                for row in rows
+            ]
+        finally:
+            session.close()
+
     def latest_events_by_agent(self, agents: list[str]) -> dict[str, dict | None]:
         session = self._session()
         try:

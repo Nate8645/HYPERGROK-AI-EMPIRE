@@ -216,6 +216,7 @@ def run_sized_backtest(
     slippage_rate: Decimal = Decimal("0.001"),
     quote_min_size: Decimal = Decimal("1"),
     max_risk_fraction: Decimal = Decimal("0.01"),
+    use_vol_filter: bool = True,
 ) -> dict:
     """Size each entry as a fraction of equity. A planned loss above the risk cap is not filled."""
     if strategy not in STRATEGIES:
@@ -256,7 +257,7 @@ def run_sized_backtest(
 
     for i in range(len(candles)):
         price = _d(candles[i]["close"])
-        want = 0 if not volatility_filter(candles, i) else signal(candles, i)
+        want = 0 if use_vol_filter and not volatility_filter(candles, i) else signal(candles, i)
         if position:
             stop_hit = price <= entry * (Decimal("1") - stop_fraction)
             take_hit = price >= entry * (Decimal("1") + take_profit_fraction)

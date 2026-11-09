@@ -163,6 +163,24 @@ Updated 2026-11-09 after session auth, the 191ff29 audit fixes, logout, and the 
 - frontend vitest: 7 passed. Production build succeeded.
 - monitor vitest: 9 passed. Production build succeeded.
 
+## Intraday screen and simulated trial
+
+- Status: tested locally. Simulated. Not approved for real money. Activation stays blocked. See `docs/ACTIVATION_SUMMARY.md`.
+- Public candles with volume: `docs/research/intraday-candles-2026-11-09.json`. Hourly BTC-USD and ETH-USD have 36,337 bars, SOL-USD 36,335, from 2022-09-17 08:00Z through 2026-11-09 21:00Z. Fifteen-minute bars are 5,150 each, from 2026-09-17 06:00Z through 2026-11-09 21:15Z. The exchange still had older hourly bars, so this is the downloaded window.
+- Strategy evaluation used the latest 2,000 bars because the research functions recompute indicators per bar. Stop-overshoot and gap stress used every downloaded bar. Outcome: **NO TRADE**. No row is robust. BTC-USD hourly 10% expectancies are negative (ema_cross -0.00726 on 22 trades, mean_reversion -0.00429 on 34, breakout -0.00274 on 9, momentum -0.00507 on 40). Walk-forward out-of-sample trade counts for that window are ema_cross 16 and 18, mean_reversion 31 and 44, breakout 27 and 16, momentum 52 and 54. Full-series hourly gap-stress share on a 0.6% move is 0.145. VWAP is present because these bars have volume.
+- 25%, 50%, and 100% sizes recorded 0 trades on that window: a 5% stop on those fractions breaks the 1% budget.
+- Seven rule-based agents ran Desk Lead first on the saved public USDC books. Artifact: `docs/research/agent-evidence-run.json`. BTC-USDC reached the Risk Manager and was REJECT. ETH-USDC and SOL-USDC stopped at a neutral book, so the Risk Manager entry is skipped. Nothing was transmitted.
+- Simulated trial: `docs/research/trial-run-simulated.json`, label SIMULATED. Balance read: USDC available 10.896768, hold 0, BTC/CHF/EUR available 0. No desk CDP key, so the order preview is NOT RUN. 100% violates 1%. The largest size inside 1% is 2.05 USDC, which is below the 10 USD minimum without an FX quote, so the decision is NO TRADE. Mock buy and mock sell are recorded with transmitted false. The kill switch blocked the next evaluation. The protected dashboard loads this file at `GET /api/desk/simulated-trial` after login.
+- The three flags stay false.
+
+### Tests actually run
+
+- pytest: 102 passed, 1 Starlette warning. Line coverage 87% (4405 statements, 565 missed).
+- frontend vitest: 8 passed. Production build succeeded.
+- monitor vitest: 9 passed. Production build succeeded.
+- `pip-audit -r requirements.txt`: no known vulnerabilities.
+- `npm audit` in `frontend/` and `monitor/`: 6 findings each, all in the Vitest 2 dev tree. The offered fix is Vitest 5, a major upgrade. It was not applied.
+
 ### Next step
 
 Your review of pull request 1. Do not merge from this workspace. Do not turn the three live flags on.
@@ -170,7 +188,3 @@ Your review of pull request 1. Do not merge from this workspace. Do not turn the
 ### Resume point
 
 Branch `cursor/phase1-desk-backend-716c`, PR https://github.com/Nate8645/HYPERGROK-AI-EMPIRE/pull/1. Activation remains blocked. See `docs/ACTIVATION_SUMMARY.md`.
-
-### Resume point
-
-Branch `cursor/phase1-desk-backend-716c`, PR https://github.com/Nate8645/HYPERGROK-AI-EMPIRE/pull/1.

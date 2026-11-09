@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
-import { ActivationCard, AgentBoard, ApprovalCard, BalanceCard, FeeCard, FillsCard, JournalCard, KillSwitch, LiveStatus, OrdersCard, PnlCard, PreviewCard, PriceCard, RiskCard, SessionBar, SignalCard, TickerBoard, UtilizationCard } from "./desk";
+import { ActivationCard, AgentBoard, ApprovalCard, BalanceCard, FeeCard, FillsCard, JournalCard, KillSwitch, LiveStatus, OrdersCard, PnlCard, PreviewCard, PriceCard, RiskCard, SessionBar, SignalCard, SimulatedTrialCard, TickerBoard, UtilizationCard } from "./desk";
 import { stripSecrets } from "./secrets";
 import type { AgentStatus, Balance, CoinbaseStatus, DeskFill, DeskOrder, JournalEntry, Portfolio, RiskConfig, Ticker, UtilizationVariant } from "./types";
 
@@ -31,6 +31,7 @@ export function App() {
   const [utilization, setUtilization] = useState<UtilizationVariant[] | null>(null);
   const [backtest, setBacktest] = useState("Keine Daten");
   const [authenticated, setAuthenticated] = useState(false);
+  const [trial, setTrial] = useState<{ label?: string; decision?: string; order_preview?: string; transmitted?: boolean; kill_switch?: { blocked?: boolean } } | null>(null);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
@@ -39,6 +40,7 @@ export function App() {
       return;
     }
     void readJson<{ agents: AgentStatus[] }>("/api/agents/status").then((body) => setAgents(body?.agents ?? []));
+    void readJson<{ label?: string; decision?: string; order_preview?: string; transmitted?: boolean; kill_switch?: { blocked?: boolean } }>("/api/desk/simulated-trial").then((body) => setTrial(body));
     void readJson<CoinbaseStatus>("/api/coinbase/status").then((body) => setCoinbase(body));
     void readJson<RiskConfig>("/api/risk/config").then((body) => setRisk(body));
     void readJson<{ entries: JournalEntry[] }>("/api/journal").then((body) => setJournal(body?.entries ?? []));
@@ -173,6 +175,7 @@ export function App() {
         <JournalCard entries={journal} />
         <PreviewCard message={preview} />
         <ApprovalCard onApprove={approve} />
+        <SimulatedTrialCard trial={trial} />
         <ActivationCard />
           </>
         )}

@@ -355,6 +355,21 @@ def get_journal(journal_id: int, request: Request) -> dict:
     return request.app.state.store.get_journal(journal_id)
 
 
+@router.get("/api/desk/simulated-trial")
+def simulated_trial() -> dict:
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[3] / "docs" / "research" / "trial-run-simulated.json"
+    if not path.is_file():
+        return {"label": "SIMULATED", "decision": "NO TRADE", "order_preview": "NOT RUN", "real_trade": False, "available": False}
+    import json
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["label"] = "SIMULATED"
+    payload["real_trade"] = False
+    return payload
+
+
 @router.post("/api/desk/run", response_model=DeskRunResult)
 def run_desk(body: DeskIdea, request: Request) -> DeskRunResult:
     return request.app.state.orchestrator.run(body, utcnow())

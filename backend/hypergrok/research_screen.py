@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 
-from hypergrok.backtest import STRATEGIES, compare_sizing
+from hypergrok.backtest import STRATEGIES, compare_sizing, walk_forward
 from hypergrok.indicators import book_metrics, latest_indicators
 from hypergrok.research_rules import detect_regime
 
@@ -46,7 +46,16 @@ def screen_product(
         )
     rows = []
     admissible = False
+    overshoot = _overshoot_share(candles, Decimal("0.05"))
     for name in STRATEGIES:
+        forward = walk_forward(
+            candles,
+            name,
+            fee_bps=fee_rate * Decimal("10000"),
+            slippage_bps=slippage_rate * Decimal("10000"),
+            use_vol_filter=len(candles) < 2000,
+        )
+        forward_oos = [fold["out_of_sample"]["trades"] for fold in forward.get("folds") or []]
         compared = compare_sizing(
             sample,
             name,
@@ -57,6 +66,7 @@ def screen_product(
             quote_min_size=Decimal("1"),
             stop_fraction=Decimal("0.05"),
             max_risk_fraction=Decimal("0.01"),
+            use_vol_filter=len(candles) < 2000,
         )
         for variant in compared["variants"]:
             if variant["variant"] == "risk_1pct":
@@ -70,6 +80,8 @@ def screen_product(
             fits_one_percent = fraction <= Decimal("0.20") and rejected == 0
             fits_three_percent = fraction <= Decimal("0.60") and rejected == 0
             robust = trades >= 20 and expectancy > 0 and fits_one_percent and fits_three_percent
+            if robust and overshoot >= Decimal("0.05"):
+                robust = False
             if robust:
                 admissible = True
             rows.append(
@@ -82,6 +94,9 @@ def screen_product(
                     "fits_1_percent": fits_one_percent,
                     "fits_3_percent": fits_three_percent,
                     "robust": robust,
+                    "walk_forward_oos_trades": forward_oos,
+                    "walk_forward_warning": forward.get("warning"),
+                    "intraday_stop_overshoot_share": format(overshoot, "f"),
                 }
             )
     return {
@@ -105,4 +120,23 @@ def screen_product(
         },
         "strategies": rows,
         "limits": {"max_loss_per_trade": "0.01", "max_loss_per_day": "0.03"},
+        "gap_stress_share": format(_overshoot_share(candles, Decimal("0.006")), "f"),
     }
+
+
+def _overshoot_share(candles: list[dict], stop_fraction: Decimal) -> Decimal:
+    """Share of bars whose low gaps through the stop versus the previous close."""
+    breaches = 0
+    count = 0
+    previous: Decimal | None = None
+    for row in candles:
+        close = Decimal(str(row["close"]))
+        low = Decimal(str(row["low"]))
+        if previous is not None and previous > 0:
+            count += 1
+            if (previous - low) / previous > stop_fraction:
+                breaches += 1
+        previous = close
+    if count == 0:
+        return Decimal("0")
+    return Decimal(breaches) / Decimal(count)

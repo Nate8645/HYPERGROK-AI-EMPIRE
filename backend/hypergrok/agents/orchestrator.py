@@ -107,6 +107,7 @@ class Orchestrator:
                 )
             else:
                 risk = self.risk_manager.run(strategy.order, now=moment, case_id=case_id)
+                self._emit("risk_manager", "agent_event", risk.status, case_id, risk.summary, risk, moment)
                 execution = self.trader.run(
                     order=strategy.order,
                     decision=risk,

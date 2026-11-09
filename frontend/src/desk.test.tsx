@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { ActivationCard, AgentBoard, ApprovalCard, BalanceCard, FillsCard, LiveStatus, OrdersCard, PnlCard, SignalCard, UtilizationCard } from "./desk";
+import { ActivationCard, AgentBoard, ApprovalCard, BalanceCard, FillsCard, LiveStatus, OrdersCard, PnlCard, SignalCard, SimulatedTrialCard, UtilizationCard } from "./desk";
 import { stripSecrets } from "./secrets";
 
 test("strips secret-like fields before render", () => {
@@ -93,6 +93,18 @@ test("missing private panels stay Keine Daten and approval does not invent a tok
   );
   expect(screen.getAllByText("Keine Daten").length).toBeGreaterThan(0);
   expect(screen.getByText(/Live flags stay off/)).toBeInTheDocument();
+});
+
+test("simulated trial is labelled and does not claim a transmitted order", () => {
+  render(
+    <SimulatedTrialCard
+      trial={{ label: "SIMULATED", decision: "NO TRADE", order_preview: "NOT RUN", transmitted: false, kill_switch: { blocked: true } }}
+    />,
+  );
+  expect(screen.getByText("SIMULATED")).toBeInTheDocument();
+  expect(screen.getByText(/No order was transmitted/)).toBeInTheDocument();
+  expect(screen.getByText(/Decision NO TRADE/)).toBeInTheDocument();
+  expect(screen.getByText(/Order preview NOT RUN/)).toBeInTheDocument();
 });
 
 test("activation fields start empty and do not arm the desk", () => {
