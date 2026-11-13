@@ -190,7 +190,7 @@
       return s;
     }
     async function expired(prep) {
-      const h = await rpc("getBlockHeight", ["confirmed"]);
+      const h = await rpc("getBlockHeight", [{ commitment: "confirmed" }]);
       return { height: h, expired: h > prep.lastValidBlockHeight };
     }
 
@@ -284,7 +284,7 @@
           if (v.err) { err = v.err; confirmation = v; break; }
           if (v.confirmationStatus === "confirmed" || v.confirmationStatus === "finalized") { confirmation = v; break; }
         }
-        const height = await rpc("getBlockHeight", ["confirmed"]);
+        const height = await rpc("getBlockHeight", [{ commitment: "confirmed" }]);
         if (height > prep.lastValidBlockHeight && !v) throw new Error("Blockhash abgelaufen, bevor die Signatur bestätigt wurde. Nicht erneut senden; neu vorbereiten.");
         await new Promise((r) => setTimeout(r, 2000));
       }
