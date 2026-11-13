@@ -20,7 +20,7 @@
     const MEMO = "HyperGrok DEVNET TEST";
     const STORE = "hg-devnet-tx-test";
     const SENT = "hg-devnet-tx-sent";
-    const SESSION = "hg-devnet-test-state"; // may share a recent connect session
+    const SESSION = "hg-devnet-tx-session"; // own key, never shared with the signMessage test
     const STEP_TTL_MS = 5 * 60 * 1000;
     const dl = createDeeplink({ nacl, base: PHANTOM_UL });
 
@@ -206,7 +206,10 @@
       });
       const check = validateConnectUrl(url);
       if (!check.ok) throw new Error("CONNECT_URL_INVALID: " + check.errors.join("; "));
-      save(SESSION, { secret: [...k.secret], pub: k.publicKeyB58, step: "connect_started", pendingTx: true, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString() });
+      // Keep the last few pending connect keys (10 min) so a repeated tap or an older Phantom callback still decrypts.
+      const prevKeys = ((load(SESSION) || {}).pendingKeys || []).filter((x) => Date.now() - x.at < 10 * 60 * 1000).slice(-4);
+      const pendingKeys = [...prevKeys, { secret: [...k.secret], pub: k.publicKeyB58, at: Date.now() }];
+      save(SESSION, { secret: [...k.secret], pub: k.publicKeyB58, pendingKeys, step: "connect_started", pendingTx: true, updatedAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 10 * 60 * 1000).toISOString() });
       save(STORE, { ...pending, waiting: "connect" });
       setStatus("Phantom wird für die Devnet-Verbindung geöffnet (cluster=devnet)…");
       location.href = url;
@@ -366,7 +369,13 @@
       if (q.get("step") === "tx-connected") {
         if (!Sraw?.secret) { setErr("Sitzungsschlüssel fehlt (möglicherweise neuer Tab ohne localStorage). Bitte neu vorbereiten."); clearQuery(); return; }
         try {
-          const c = dl.parseConnectResponse(q, Uint8Array.from(Sraw.secret));
+          let c = null, used = null, lastErr = null;
+          const cands = [...(Sraw.pendingKeys || []).slice().reverse(), { secret: Sraw.secret, pub: Sraw.pub }];
+          for (const cand of cands) {
+            try { c = dl.parseConnectResponse(q, Uint8Array.from(cand.secret)); used = cand; break; } catch (e) { lastErr = e; if (q.get("errorCode")) throw e; }
+          }
+          if (!c) { save(SESSION, null); throw new Error((lastErr && lastErr.message || "PHANTOM_DECRYPT_FAILED") + " — Verbindung zurückgesetzt. Bitte «In Phantom signieren» noch einmal tippen (neue Verbindung)."); }
+          Sraw.secret = used.secret; Sraw.pub = used.pub; delete Sraw.pendingKeys;
           if (c.publicKey !== EXPECTED_OWNER) throw new Error("WRONG_SIGNER: Phantom lieferte " + c.publicKey + ", erwartet " + EXPECTED_OWNER);
           save(SESSION, { ...Sraw, session: c.session, phantomPub: c.phantomEncryptionPublicKey, publicKey: c.publicKey });
           clearQuery();
@@ -386,7 +395,12 @@
           const prep = load(STORE)?.prep;
           if (!S?.phantomPub || !S.secret || !prep) throw new Error("Sitzung oder vorbereitete Transaktion fehlt. Bitte neu vorbereiten.");
           const shared = dl.sharedSecret(S.phantomPub, Uint8Array.from(S.secret));
-          const { transactionBytes } = dl.parseSignTransactionResponse(q, shared);
+          let transactionBytes;
+          try { ({ transactionBytes } = dl.parseSignTransactionResponse(q, shared)); }
+          catch (e) {
+            if (String(e.message || e).includes("DECRYPT")) { save(SESSION, null); throw new Error("PHANTOM_DECRYPT_FAILED — alte Phantom-Sitzung. Verbindung zurückgesetzt. Bitte neu vorbereiten und «In Phantom signieren» tippen (neue Verbindung)."); }
+            throw e;
+          }
           clearQuery();
           await onSigned(transactionBytes, prep);
         } catch (e) { setErr(String(e.message || e)); clearQuery(); }
@@ -408,6 +422,8 @@
         if (!prep) throw new Error("Bitte zuerst vorbereiten.");
         if (cachedHeight == null || Date.now() - cachedHeightAt > 30000) { refreshHeight(); throw new Error("Blockhöhe wird noch geladen. Bitte in 5 Sekunden erneut tippen."); }
         if (cachedHeight > prep.lastValidBlockHeight) throw new Error("Zeitüberschreitung: Blockhash abgelaufen. Bitte neu vorbereiten.");
+        if (Date.now() - (window.__hgLaunchAt || 0) < 4000) return; // ignore double taps while Phantom opens
+        window.__hgLaunchAt = Date.now();
         const S = sessionOk();
         if (!S) startConnect();
         else startSign(S, prep);
