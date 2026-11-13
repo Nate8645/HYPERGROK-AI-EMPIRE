@@ -10,19 +10,40 @@
 </head>
 <body>
 <h2>HyperGrok – Devnet-Freigabe signieren</h2>
-<p class="warn">Nur <b>Solana Devnet</b>. Mainnet wird hart abgelehnt. Diese Seite <b>sendet keine Transaktion</b>. Öffne sie in <b>Safari</b>, tippe den Knopf, bestätige in der Phantom-App. Phantom kehrt danach zu Safari zurück. Ein Browser in der Phantom-App ist nicht nötig. Die Nachricht beginnt immer mit <b>HyperGrok DEVNET TEST ONLY - NO LIVE TRADING AUTHORIZATION</b>. Sie ist <b>keine</b> Live-Trading-Freigabe. Seed-Phrase oder privaten Schlüssel nirgends eingeben.</p>
+<p class="warn">Nur <b>Solana Devnet</b>. Mainnet wird hart abgelehnt. Diese Seite <b>sendet keine Transaktion</b>. Öffne sie in <b>Safari</b>. Nach dem Verbinden kann Safari den zweiten Schritt (Signatur) blockieren, weil dafür ein Tipp nötig ist. Tippe dann <b>Signatur in Phantom anfordern</b>. Die Nachricht beginnt immer mit <b>HyperGrok DEVNET TEST ONLY - NO LIVE TRADING AUTHORIZATION</b>. Sie ist <b>keine</b> Live-Trading-Freigabe. Seed-Phrase oder privaten Schlüssel nirgends eingeben.</p>
 <p>Netzwerk: <b>devnet</b> (fest, nicht änderbar)</p>
+
+<section id="panel" class="panel" aria-live="polite">
+  <h3>Status</h3>
+  <ol id="steps" class="steps">
+    <li data-step="connect_started">Wallet-Verbindung gestartet</li>
+    <li data-step="connected">Verbindung bestätigt <span id="pkShort"></span></li>
+    <li data-step="sign_requested">Signatur angefordert</li>
+    <li data-step="signed">Signatur erhalten</li>
+    <li data-step="verified">Signatur geprüft (ed25519)</li>
+  </ol>
+  <p id="status" class="status">Noch nicht gestartet.</p>
+  <p id="err" class="err"></p>
+</section>
+
 <p><label>Test-Nachricht (fest, kein Live-Format; nonce und Zeitpunkt werden hier erzeugt)<br>
 <textarea id="message" readonly></textarea></label></p>
 <button type="button" id="btnNewMessage" class="secondary">Neue Test-Nachricht erzeugen</button>
-<p id="status" class="status" hidden></p>
-<button type="button" id="btnStart">Mit Phantom verbinden und Test-Nachricht signieren</button>
+<button type="button" id="btnStart">Mit Phantom verbinden</button>
+<a class="btn" id="btnSign" hidden href="#">Signatur in Phantom anfordern</a>
+<button type="button" id="btnRestart" class="secondary">Neu starten</button>
+
 <h3>Ergebnis (an den Desk zurückgeben)</h3>
 <textarea id="out" readonly placeholder="noch nichts signiert"></textarea>
 <button type="button" id="btnCopy" class="secondary" disabled>Ergebnis kopieren</button>
 <button type="button" id="btnDownload" class="secondary" disabled>Als Datei speichern</button>
-<p id="err" class="err"></p>
 <p class="ok">Prüfung auf der Box: Datei oder kopierten Text zurückgeben, dann <code>npm run verify-signature -- signed.json</code>. Das prüft nur die ed25519-Signatur (Test only). Kein Senden. Keine Live-Freigabe.</p>
+
+<details id="debugWrap" class="debug">
+  <summary>Debug (für Fehlermeldung, ohne Geheimnisse)</summary>
+  <pre id="debug" class="debug-body">Noch keine Callback-Daten.</pre>
+</details>
+
 <script src="vendor/nacl-fast.min.js"></script>
 <script src="phantom-deeplink.js"></script>
 <script src="approval-app.js"></script>
