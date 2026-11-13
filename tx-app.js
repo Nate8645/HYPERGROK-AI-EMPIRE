@@ -374,7 +374,13 @@
           for (const cand of cands) {
             try { c = dl.parseConnectResponse(q, Uint8Array.from(cand.secret)); used = cand; break; } catch (e) { lastErr = e; if (q.get("errorCode")) throw e; }
           }
-          if (!c) { save(SESSION, null); throw new Error((lastErr && lastErr.message || "PHANTOM_DECRYPT_FAILED") + " — Verbindung zurückgesetzt. Bitte «In Phantom signieren» noch einmal tippen (neue Verbindung)."); }
+          if (!c) {
+            save(SESSION, null);
+            const sh = (x) => (x ? String(x).slice(0, 6) + "…" : "—");
+            const src = new URLSearchParams(location.search).has("data") ? "query" : "hash";
+            const diag = " [Diagnose: " + cands.length + " Schlüssel probiert (" + cands.map((x) => sh(x.pub)).join(", ") + "), Phantom-Key " + sh(q.get("phantom_encryption_public_key")) + ", nonce " + (q.get("nonce") || "").length + " Zeichen, data " + (q.get("data") || "").length + " Zeichen, Quelle " + src + "]";
+            throw new Error((lastErr && lastErr.message || "PHANTOM_DECRYPT_FAILED") + " — Verbindung zurückgesetzt. Wahrscheinlich hat Phantom eine alte Verbindung dieser Seite wiederverwendet: bitte in Phantom die verbundene Seite nate8645.github.io trennen und dann «In Phantom signieren» noch einmal tippen." + diag);
+          }
           Sraw.secret = used.secret; Sraw.pub = used.pub; delete Sraw.pendingKeys;
           if (c.publicKey !== EXPECTED_OWNER) throw new Error("WRONG_SIGNER: Phantom lieferte " + c.publicKey + ", erwartet " + EXPECTED_OWNER);
           save(SESSION, { ...Sraw, session: c.session, phantomPub: c.phantomEncryptionPublicKey, publicKey: c.publicKey });
