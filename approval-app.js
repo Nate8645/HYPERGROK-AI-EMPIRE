@@ -12,7 +12,7 @@
       if (el) el.textContent = "Seite unvollständig geladen (lokale Skripte fehlen). Bitte in Safari neu laden.";
       return;
     }
-    const { createDeeplink, b58encode, b58decode, formatPhantomError } = HG;
+    const { createDeeplink, b58encode, b58decode, formatPhantomError, validateConnectUrl, PHANTOM_UL, PHANTOM_APP_UL } = HG;
     const $ = (id) => document.getElementById(id);
     const CLUSTER = "devnet";
     const MAINNET_GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d";
@@ -195,21 +195,43 @@
       setError(message);
       setStatus("Fehler: " + (code || "unbekannt"));
       $("status").classList.add("err-status");
-      renderDebug({ step: "error", errorCode: code });
+      const st = readRaw(localStorage, STORE_LOCAL) || {};
+      if (st.step === "connect_started" || st.connectUrl) markSteps("connect_started");
+      renderDebug({ step: "error", errorCode: code, connectUrl: st.connectUrl, variant: st.variant });
       try { $("debugWrap").open = true; } catch {}
     }
     function renderDebug(extra) {
       const st = readRaw(localStorage, STORE_LOCAL) || {};
+      const url = extra?.connectUrl || st.connectUrl || lastDebug.connectUrl || "";
+      const check = url ? validateConnectUrl(url) : null;
       const lines = [
-        "Callback-Parameter (nur Namen): " + (lastDebug.callbackParamNames.join(", ") || "—"),
+        "Connect-Variante: " + (extra?.variant || st.variant || lastDebug.variant || "—"),
+        "Connect-URL (alles öffentlich, keine Wallet-Geheimnisse):",
+        url || "—",
+        "Prüfung der Connect-URL: " + (check ? (check.ok ? "OK" : "FEHLER: " + check.errors.join("; ")) : "—"),
+      ];
+      if (check && check.details) {
+        const d = check.details;
+        lines.push(
+          "  host/path: " + (d.hostPath || "—"),
+          "  app_url: " + (d.params.app_url || "—"),
+          "  redirect_link (einmal dekodiert): " + (d.params.redirect_link || "—"),
+          "  dapp_encryption_public_key: " + (d.params.dapp_encryption_public_key || "—"),
+          "  dapp_encryption_public_key Bytes: " + (d.pubkeyBytes == null ? "—" : String(d.pubkeyBytes)),
+          "  cluster: " + (d.params.cluster || "—"),
+          "  redirect_link einfach kodiert: " + (d.encoding && d.encoding.singleEncoded ? "ja" : "nein/unbekannt")
+        );
+      }
+      lines.push(
+        "Callback-Parameter (Namen; Werte nur bei öffentlichen Connect-Feldern oben): " + (lastDebug.callbackParamNames.join(", ") || "—"),
         "Öffentliche Adresse (gekürzt): " + (lastDebug.publicKeyShort || shortKey(st.publicKey) || "—"),
         "localStorage-Zustand gefunden: " + (lastDebug.fromLocalStorage ? "ja" : "nein"),
         "sessionStorage-Zustand gefunden: " + (lastDebug.fromSessionStorage ? "ja" : "nein"),
         "Vermutlich neuer Safari-Tab: " + (lastDebug.newTabLikely ? "ja" : "nein"),
         "Schritt: " + (extra?.step || st.step || "—"),
         "Aktualisiert: " + (st.updatedAt || "—"),
-        "Läuft ab: " + (st.expiresAt || "—"),
-      ];
+        "Läuft ab: " + (st.expiresAt || "—")
+      );
       if (extra?.errorCode) lines.push("Fehlercode intern: " + extra.errorCode);
       $("debug").textContent = lines.join("\n");
     }
@@ -255,7 +277,7 @@
         shared,
         session: state.session,
         message: msg,
-        redirectLink: `${pageBaseUrl()}?step=approved`,
+        redirectLink: `${pageBaseUrl()}#step=approved`,
       });
       a.href = url;
       a.hidden = false;
@@ -317,7 +339,7 @@
     $("btnRestart").onclick = () => {
       clearAllStores(false);
       session = { publicKey: null, approval: null, method: null };
-      lastDebug = { callbackParamNames: [], publicKeyShort: null, fromSessionStorage: false, fromLocalStorage: false, newTabLikely: false };
+      lastDebug = { callbackParamNames: [], publicKeyShort: null, fromSessionStorage: false, fromLocalStorage: false, newTabLikely: false, connectUrl: "", variant: "" };
       hideSignButton();
       $("pkShort").textContent = "";
       $("out").value = "";
@@ -375,10 +397,34 @@
       renderDebug({ step: "verified" });
     }
 
-    function startDeeplinkConnect() {
+    function variantSpec(name) {
+      const page = pageBaseUrl();
+      const origin = location.origin;
+      const base = name === "host_phantom_app" ? PHANTOM_APP_UL : PHANTOM_UL;
+      const appUrl = name === "app_url_origin" ? origin : page;
+      let redirectLink;
+      if (name === "clean_redirect") redirectLink = page;
+      else redirectLink = page + "#step=connected";
+      return { name, base, appUrl, redirectLink, cluster: "devnet" };
+    }
+
+    function startDeeplinkConnect(variantName) {
       assertDevnet(CLUSTER);
+      const spec = variantSpec(variantName || "standard");
+      if (spec.cluster !== "devnet") throw new Error("MAINNET_REFUSED");
       const msg = message();
       const k = dl.newSessionEncryptionKeys();
+      const url = dl.connectUrl({
+        dappEncryptionPublicKeyB58: k.publicKeyB58,
+        appUrl: spec.appUrl,
+        redirectLink: spec.redirectLink,
+        cluster: "devnet",
+        base: spec.base,
+      });
+      const check = validateConnectUrl(url);
+      if (!check.ok) throw new Error("CONNECT_URL_INVALID: " + check.errors.join("; "));
+      lastDebug.connectUrl = url;
+      lastDebug.variant = spec.name;
       saveState({
         secret: [...k.secret],
         pub: k.publicKeyB58,
@@ -387,16 +433,12 @@
         session: null,
         phantomPub: null,
         publicKey: null,
+        variant: spec.name,
+        connectUrl: url,
       });
       markSteps("connect_started");
-      setStatus("Wallet-Verbindung gestartet. Phantom wird geöffnet. Nach der Bestätigung kehrst du zu Safari zurück.");
-      renderDebug({ step: "connect_started" });
-      const url = dl.connectUrl({
-        dappEncryptionPublicKeyB58: k.publicKeyB58,
-        appUrl: pageBaseUrl(),
-        redirectLink: `${pageBaseUrl()}?step=connected`,
-        cluster: "devnet",
-      });
+      setStatus("Wallet-Verbindung gestartet (" + spec.name + "). Phantom wird geöffnet. Nach der Bestätigung kehrst du zu Safari zurück.");
+      renderDebug({ step: "connect_started", connectUrl: url, variant: spec.name });
       location.href = url;
     }
 
@@ -411,7 +453,9 @@
         return "error";
       }
       const state = loadState();
-      if (q.get("step") === "connected") {
+      const isConnectCb = q.get("step") === "connected" || (q.get("phantom_encryption_public_key") && q.get("nonce") && q.get("data"));
+      const isSignCb = q.get("step") === "approved" || (q.get("nonce") && q.get("data") && !q.get("phantom_encryption_public_key") && (state?.session || state?.step === "sign_requested"));
+      if (isConnectCb) {
         if (!state?.secret) {
           fail("Sitzungsschlüssel fehlt – die Seite wurde in einem neuen Tab geöffnet und der lokale Testzustand ist nicht vorhanden oder abgelaufen. Tippe «Neu starten» und verbinde erneut.", "missing_session_key");
           clearQuery();
@@ -443,7 +487,7 @@
         enterConnected(next);
         return "connected";
       }
-      if (q.get("step") === "approved") {
+      if (isSignCb) {
         if (!state?.secret || !state.phantomPub) {
           fail("Sitzungsschlüssel fehlt – die Signatur-Antwort konnte nicht entschlüsselt werden. Tippe «Neu starten».", "missing_session_key");
           clearQuery();
@@ -519,14 +563,19 @@
       writeRaw(localStorage, STORE_LOCAL, st);
     }
 
-    $("btnStart").onclick = () => {
+    function startFromButton(variantName, allowInjected) {
       try {
         setError("");
+        $("status").classList.remove("err-status");
         assertDevnet(CLUSTER);
-        if (getProvider()) injectedSign().catch((e) => setError(String(e.message || e)));
-        else startDeeplinkConnect();
+        if (allowInjected && getProvider()) injectedSign().catch((e) => setError(String(e.message || e)));
+        else startDeeplinkConnect(variantName);
       } catch (e) { setError(String(e.message || e)); }
-    };
+    }
+    $("btnStart").onclick = () => startFromButton("standard", true);
+    $("btnVarAppHost").onclick = () => startFromButton("host_phantom_app", false);
+    $("btnVarOrigin").onclick = () => startFromButton("app_url_origin", false);
+    $("btnVarCleanRedirect").onclick = () => startFromButton("clean_redirect", false);
 
     window.addEventListener("storage", (ev) => {
       if (ev.key !== STORE_LOCAL) return;

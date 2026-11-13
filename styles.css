@@ -21,3 +21,7 @@ h2,h3{margin-bottom:.4rem}
 .debug{margin:1rem 0;font-size:.9rem}
 .debug-body{white-space:pre-wrap;background:#f4f4f6;padding:.6rem;border-radius:6px;overflow:auto}
 #btnSign{font-size:1.1rem;padding:.9rem 1rem}
+
+.variants{border:1px dashed #888;border-radius:8px;padding:.6rem 1rem;margin:1rem 0;background:#fff}
+.variants h3{margin:.2rem 0 .4rem;font-size:1rem}
+.variants p{margin:.3rem 0 .6rem}

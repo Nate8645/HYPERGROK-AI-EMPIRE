@@ -36,6 +36,84 @@
   const enc = (s) => new TextEncoder().encode(s);
   const dec = (b) => new TextDecoder().decode(b);
 
+
+  const PHANTOM_APP_UL = "https://phantom.app/ul/v1";
+  const ALLOWED_CONNECT_BASES = new Set([PHANTOM_UL, PHANTOM_APP_UL]);
+
+  function isHttpsUrl(value) {
+    try {
+      const u = new URL(String(value ?? ""));
+      if (u.protocol === "https:") return true;
+      // Local test servers only. The public GitHub Pages URL is always https.
+      if (u.protocol === "http:" && (u.hostname === "127.0.0.1" || u.hostname === "localhost")) return true;
+      return false;
+    } catch {
+      return false;
+    }
+  }
+
+  // Automated check of a generated Phantom connect URL against official docs:
+  // https://docs.phantom.com/phantom-deeplinks/provider-methods/connect
+  function validateConnectUrl(url) {
+    const errors = [];
+    const details = { url: String(url ?? ""), hostPath: "", params: {}, pubkeyBytes: null, encoding: {} };
+    let u;
+    try { u = new URL(url); } catch {
+      return { ok: false, errors: ["URL is not parseable"], details };
+    }
+    details.hostPath = u.origin + u.pathname;
+    const allowedPaths = new Set(["https://phantom.com/ul/v1/connect", "https://phantom.app/ul/v1/connect"]);
+    if (!allowedPaths.has(details.hostPath)) errors.push("host/path must be https://phantom.com/ul/v1/connect or https://phantom.app/ul/v1/connect");
+    if (u.protocol !== "https:") errors.push("connect URL must be https");
+    const q = u.searchParams;
+    const keys = [...q.keys()];
+    details.paramNames = keys;
+    const required = ["app_url", "dapp_encryption_public_key", "redirect_link", "cluster"];
+    for (const k of required) if (!q.get(k)) errors.push("missing required param " + k);
+    const allowed = new Set(required);
+    for (const k of keys) if (!allowed.has(k)) errors.push("unexpected param " + k);
+    const cluster = q.get("cluster");
+    details.params.cluster = cluster;
+    if (cluster && cluster !== "devnet") errors.push("cluster must be exactly devnet (got " + cluster + ")");
+    if (cluster === "mainnet-beta" || cluster === "mainnet" || (cluster && /mainnet/i.test(cluster))) {
+      errors.push("MAINNET_REFUSED");
+    }
+    const appUrl = q.get("app_url");
+    const redirect = q.get("redirect_link");
+    details.params.app_url = appUrl;
+    details.params.redirect_link = redirect;
+    details.params.dapp_encryption_public_key = q.get("dapp_encryption_public_key");
+    if (appUrl && !isHttpsUrl(appUrl)) errors.push("app_url must be a valid https URL");
+    if (redirect && !isHttpsUrl(redirect)) errors.push("redirect_link must be a valid https URL");
+    // URLSearchParams.get already decodes once. A correctly single-encoded https URL
+    // should not still be percent-encoded after that decode.
+    if (redirect && /%3A%2F%2F/i.test(redirect)) errors.push("redirect_link appears double-encoded");
+    if (appUrl && /%3A%2F%2F/i.test(appUrl)) errors.push("app_url appears double-encoded");
+    const rawQuery = u.search;
+    const redirRaw = (rawQuery.match(/[?&]redirect_link=([^&]*)/) || [])[1] || "";
+    details.encoding.redirect_link_query_piece = redirRaw;
+    try {
+      details.encoding.redirect_decoded_once = decodeURIComponent(redirRaw);
+      details.encoding.singleEncoded = decodeURIComponent(redirRaw) === redirect;
+    } catch {
+      errors.push("redirect_link query piece is not decodable");
+    }
+    const pubB58 = q.get("dapp_encryption_public_key") || "";
+    if (pubB58) {
+      if (!/^[1-9A-HJ-NP-Za-km-z]+$/.test(pubB58)) errors.push("dapp_encryption_public_key is not valid base58");
+      else {
+        try {
+          const bytes = b58decode(pubB58);
+          details.pubkeyBytes = bytes.length;
+          if (bytes.length !== 32) errors.push("dapp_encryption_public_key decodes to " + bytes.length + " bytes, expected 32");
+        } catch (e) {
+          errors.push("dapp_encryption_public_key base58 decode failed: " + (e.message || e));
+        }
+      }
+    }
+    return { ok: errors.length === 0, errors, details };
+  }
+
   function createDeeplink({ nacl, base = PHANTOM_UL }) {
     if (!nacl?.box) throw new Error("tweetnacl required");
     const api = {
@@ -51,15 +129,26 @@
         if (!opened) throw new Error("PHANTOM_DECRYPT_FAILED: wrong shared secret or tampered data");
         return JSON.parse(dec(opened));
       },
-      connectUrl({ dappEncryptionPublicKeyB58, appUrl, redirectLink, cluster }) {
+      connectUrl({ dappEncryptionPublicKeyB58, appUrl, redirectLink, cluster, base: baseOverride }) {
         if (cluster !== "devnet") throw new Error("MAINNET_REFUSED: this page only connects on Solana Devnet (cluster must be exactly devnet)");
+        const root = baseOverride || base;
+        if (!ALLOWED_CONNECT_BASES.has(root)) {
+          throw new Error("CONNECT_HOST_REFUSED: host must be https://phantom.com/ul/v1 or https://phantom.app/ul/v1");
+        }
+        if (!isHttpsUrl(appUrl)) throw new Error("APP_URL_MUST_BE_HTTPS");
+        if (!isHttpsUrl(redirectLink)) throw new Error("REDIRECT_LINK_MUST_BE_HTTPS");
+        const pub = b58decode(dappEncryptionPublicKeyB58);
+        if (pub.length !== 32) throw new Error("DAPP_ENCRYPTION_PUBLIC_KEY must be base58 of a 32-byte x25519 public key");
         const q = new URLSearchParams({
           app_url: appUrl,
           dapp_encryption_public_key: dappEncryptionPublicKeyB58,
           redirect_link: redirectLink,
           cluster: "devnet",
         });
-        return `${base}/connect?${q}`;
+        const url = `${root}/connect?${q}`;
+        const check = validateConnectUrl(url);
+        if (!check.ok) throw new Error("CONNECT_URL_INVALID: " + check.errors.join("; "));
+        return url;
       },
       parseConnectResponse(params, dappSecret) {
         const p = params instanceof URLSearchParams ? params : new URLSearchParams(params);
@@ -107,7 +196,7 @@
     "-32002": "In Phantom ist bereits ein Bestätigungsfenster offen. Bitte zuerst dort bestätigen oder ablehnen.",
     "-32003": "Phantom hat die Anfrage als ungültige Transaktion abgelehnt.",
     "-32601": "Phantom kennt diese Methode nicht.",
-    "-32603": "In Phantom ist ein interner Fehler aufgetreten.",
+    "-32603": "In Phantom ist ein interner Fehler aufgetreten. Häufig bei Connect: Testnet Mode ist aus, oder ein Connect-Parameter wird von dieser Phantom-Version nicht erwartet. In Phantom: Profil → Einstellungen → Developer Settings → Testnet Mode, Netzwerk Solana Devnet. Danach eine der Varianten-Knöpfe auf dieser Seite versuchen.",
   };
 
   function formatPhantomError(code, message) {
@@ -119,5 +208,5 @@
     return parts.join(" ");
   }
 
-  global.HGPhantomDeeplink = { PHANTOM_UL, b58encode, b58decode, createDeeplink, formatPhantomError, phantomQueryError };
+  global.HGPhantomDeeplink = { PHANTOM_UL, PHANTOM_APP_UL, b58encode, b58decode, createDeeplink, validateConnectUrl, formatPhantomError, phantomQueryError, isHttpsUrl };
 })(window);

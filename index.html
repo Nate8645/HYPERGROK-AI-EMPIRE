@@ -33,6 +33,14 @@
 <a class="btn" id="btnSign" hidden href="#">Signatur in Phantom anfordern</a>
 <button type="button" id="btnRestart" class="secondary">Neu starten</button>
 
+<section id="variants" class="variants">
+  <h3>Falls Phantom mit -32603 / Unexpected error zurückkehrt</h3>
+  <p>Zuerst in Phantom <b>Testnet Mode</b> einschalten: Profil-Avatar → Einstellungen → Developer Settings → Testnet Mode, Netzwerk <b>Solana Devnet</b> (offizielle Doku). Alle Varianten bleiben auf <b>cluster=devnet</b> — es gibt keinen Mainnet-Knopf. Tippe jeweils nur eine Variante und merke, welche (falls eine) funktioniert.</p>
+  <button type="button" id="btnVarAppHost" class="secondary">Variante: Host phantom.app (wie die offizielle Demo)</button>
+  <button type="button" id="btnVarOrigin" class="secondary">Variante: app_url nur Origin (https://nate8645.github.io)</button>
+  <button type="button" id="btnVarCleanRedirect" class="secondary">Variante: redirect_link ohne Query/Hash</button>
+</section>
+
 <h3>Ergebnis (an den Desk zurückgeben)</h3>
 <textarea id="out" readonly placeholder="noch nichts signiert"></textarea>
 <button type="button" id="btnCopy" class="secondary" disabled>Ergebnis kopieren</button>
