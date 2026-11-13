@@ -6,7 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src https://api.devnet.solana.com; form-action 'none'; base-uri 'none'; object-src 'none'; worker-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="no-referrer">
 <title>HyperGrok – Devnet-Freigabe signieren</title>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=20261113b">
 </head>
 <body>
 <h2>HyperGrok – Devnet-Freigabe signieren</h2>
@@ -83,14 +83,14 @@
     <h3>Devnet-Ergebnis (an den Desk zurückgeben)</h3>
     <textarea id="txOut" readonly></textarea>
     <button type="button" id="btnTxCopy" class="secondary">Ergebnis kopieren</button>
-    <p class="ok">Prüfung auf der Box: <code>npm run devnet:verify-tx -- &lt;Signatur&gt;</code> (optional mit der JSON-Datei). Nur Devnet, kein Senden.</p>
+    <p class="ok">Prüfung auf der Box: <code>npm run devnet:verify-tx -- <Signatur></code> (optional mit der JSON-Datei). Nur Devnet, kein Senden.</p>
   </div>
 </section>
 
-<script src="vendor/nacl-fast.min.js"></script>
-<script src="phantom-deeplink.js"></script>
-<script src="solana-tx.js"></script>
-<script src="approval-app.js"></script>
-<script src="tx-app.js"></script>
+<script src="vendor/nacl-fast.min.js?v=20261113b"></script>
+<script src="phantom-deeplink.js?v=20261113b"></script>
+<script src="solana-tx.js?v=20261113b"></script>
+<script src="approval-app.js?v=20261113b"></script>
+<script src="tx-app.js?v=20261113b"></script>
 </body>
 </html>
