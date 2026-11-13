@@ -394,19 +394,23 @@
     }
 
     $("btnTxPrepare").onclick = () => { prepare().catch((e) => { setErr(String(e.message || e)); setStatus("Vorbereitung fehlgeschlagen."); }); };
+    // iOS: a universal link only opens Phantom when navigation happens synchronously inside the tap.
+    // So the expiry check uses a block height cached in the background, never an await in the click handler.
+    let cachedHeight = null, cachedHeightAt = 0;
+    async function refreshHeight() {
+      try { cachedHeight = await rpc("getBlockHeight", [{ commitment: "confirmed" }]); cachedHeightAt = Date.now(); } catch {}
+    }
+    refreshHeight(); setInterval(refreshHeight, 5000);
     $("btnTxSign").onclick = () => {
       try {
         setErr("");
         const prep = load(STORE)?.prep;
         if (!prep) throw new Error("Bitte zuerst vorbereiten.");
-        expired(prep).then((ex) => {
-          if (ex.expired) { setErr("Zeitüberschreitung: Blockhash abgelaufen. Bitte neu vorbereiten."); return; }
-          try {
-            const S = sessionOk();
-            if (!S) startConnect();
-            else startSign(S, prep);
-          } catch (e) { setErr(String(e.message || e)); }
-        }).catch((e) => setErr(String(e.message || e)));
+        if (cachedHeight == null || Date.now() - cachedHeightAt > 30000) { refreshHeight(); throw new Error("Blockhöhe wird noch geladen. Bitte in 5 Sekunden erneut tippen."); }
+        if (cachedHeight > prep.lastValidBlockHeight) throw new Error("Zeitüberschreitung: Blockhash abgelaufen. Bitte neu vorbereiten.");
+        const S = sessionOk();
+        if (!S) startConnect();
+        else startSign(S, prep);
       } catch (e) { setErr(String(e.message || e)); }
     };
     $("txConfirmBox").onchange = () => {
