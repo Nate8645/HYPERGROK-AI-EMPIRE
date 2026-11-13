@@ -3,37 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'none'; object-src 'none'; worker-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; worker-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="no-referrer">
 <title>HyperGrok – Devnet-Freigabe signieren</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <h2>HyperGrok – Devnet-Freigabe signieren</h2>
-<p class="warn">Nur <b>Solana Devnet</b>. Mainnet wird hart abgelehnt. Diese Seite <b>sendet keine Transaktion</b>. Sie lässt Phantom nur eine Test-Nachricht (signMessage) signieren. Die Nachricht beginnt immer mit <b>HyperGrok DEVNET TEST ONLY - NO LIVE TRADING AUTHORIZATION</b>. Sie ist <b>keine</b> Live-Trading-Freigabe. Seed-Phrase oder privaten Schlüssel nirgends eingeben. Die Box bekommt nur deine öffentliche Adresse und die Signatur. Keine Analytics, keine externen Skripte, keine Mainnet-RPC-Aufrufe.</p>
+<p class="warn">Nur <b>Solana Devnet</b>. Mainnet wird hart abgelehnt. Diese Seite <b>sendet keine Transaktion</b>. Öffne sie in <b>Safari</b>, tippe den Knopf, bestätige in der Phantom-App. Phantom kehrt danach zu Safari zurück. Ein Browser in der Phantom-App ist nicht nötig. Die Nachricht beginnt immer mit <b>HyperGrok DEVNET TEST ONLY - NO LIVE TRADING AUTHORIZATION</b>. Sie ist <b>keine</b> Live-Trading-Freigabe. Seed-Phrase oder privaten Schlüssel nirgends eingeben.</p>
 <p>Netzwerk: <b>devnet</b> (fest, nicht änderbar)</p>
-<div id="openInPhantomWrap" hidden>
-  <p>Diese Seite ist nicht im Phantom-In-App-Browser geöffnet. Auf dem iPhone in Safari zuerst in Phantom öffnen:</p>
-  <a class="btn" id="openInPhantom" href="#">In Phantom öffnen</a>
-</div>
 <p><label>Test-Nachricht (fest, kein Live-Format; nonce und Zeitpunkt werden hier erzeugt)<br>
 <textarea id="message" readonly></textarea></label></p>
 <button type="button" id="btnNewMessage" class="secondary">Neue Test-Nachricht erzeugen</button>
-<div id="modeInApp" hidden>
-  <p>Modus: Phantom-In-App-Browser (window.phantom.solana / window.solana)</p>
-  <button type="button" id="btnInApp">Mit Phantom verbinden und Test-Nachricht signieren</button>
-</div>
-<div id="modeDeeplink" hidden>
-  <p>Modus: Phantom-Deeplink (Safari → Phantom-App → zurück). Braucht HTTPS. Alternativ zuerst den Knopf «In Phantom öffnen» nutzen.</p>
-  <button type="button" id="btnConnect" class="secondary">1. Mit Phantom verbinden (cluster=devnet)</button>
-  <button type="button" id="btnApprove" class="secondary" disabled>2. Test-Nachricht signieren (signMessage)</button>
-</div>
+<p id="status" class="status" hidden></p>
+<button type="button" id="btnStart">Mit Phantom verbinden und Test-Nachricht signieren</button>
 <h3>Ergebnis (an den Desk zurückgeben)</h3>
 <textarea id="out" readonly placeholder="noch nichts signiert"></textarea>
+<button type="button" id="btnCopy" class="secondary" disabled>Ergebnis kopieren</button>
 <button type="button" id="btnDownload" class="secondary" disabled>Als Datei speichern</button>
 <p id="err" class="err"></p>
-<p class="ok">Prüfung auf der Box: Datei zurückgeben, dann <code>npm run verify-signature -- signed.json</code>. Das prüft nur die ed25519-Signatur (Test only). Kein Senden. Keine Live-Freigabe.</p>
+<p class="ok">Prüfung auf der Box: Datei oder kopierten Text zurückgeben, dann <code>npm run verify-signature -- signed.json</code>. Das prüft nur die ed25519-Signatur (Test only). Kein Senden. Keine Live-Freigabe.</p>
 <script src="vendor/nacl-fast.min.js"></script>
-<script type="module" src="approval-app.js"></script>
+<script src="phantom-deeplink.js"></script>
+<script src="approval-app.js"></script>
 </body>
 </html>
