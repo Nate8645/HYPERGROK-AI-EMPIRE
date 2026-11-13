@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'; worker-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self'; font-src 'self'; connect-src https://api.devnet.solana.com; form-action 'none'; base-uri 'none'; object-src 'none'; worker-src 'none'; manifest-src 'none'; upgrade-insecure-requests">
 <meta name="referrer" content="no-referrer">
 <title>HyperGrok – Devnet-Freigabe signieren</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <h2>HyperGrok – Devnet-Freigabe signieren</h2>
-<p class="warn">Nur <b>Solana Devnet</b>. Mainnet wird hart abgelehnt. Diese Seite <b>sendet keine Transaktion</b>. Öffne sie in <b>Safari</b>. Nach dem Verbinden kann Safari den zweiten Schritt (Signatur) blockieren, weil dafür ein Tipp nötig ist. Tippe dann <b>Signatur in Phantom anfordern</b>. Die Nachricht beginnt immer mit <b>HyperGrok DEVNET TEST ONLY - NO LIVE TRADING AUTHORIZATION</b>. Sie ist <b>keine</b> Live-Trading-Freigabe. Seed-Phrase oder privaten Schlüssel nirgends eingeben.</p>
+<p class="warn">Nur <b>Solana Devnet</b>. Mainnet wird hart abgelehnt. Der obere Teil (signMessage) sendet keine Transaktion. Der separat gekennzeichnete <b>Devnet-Transaktionstest</b> kann eine minimale Selbstüberweisung erst nach Simulation, Phantom-Signatur, Checkbox und einem zweiten Tipp an <code>api.devnet.solana.com</code> senden. Öffne die Seite in <b>Safari</b>. Die Nachricht im Signaturtest beginnt immer mit <b>HyperGrok DEVNET TEST ONLY - NO LIVE TRADING AUTHORIZATION</b>. Kein Teil dieser Seite ist eine Live-Trading-Freigabe. Seed-Phrase oder privaten Schlüssel nirgends eingeben.</p>
 <p>Netzwerk: <b>devnet</b> (fest, nicht änderbar)</p>
 
 <section id="panel" class="panel" aria-live="polite">
@@ -52,8 +52,45 @@
   <pre id="debug" class="debug-body">Noch keine Callback-Daten.</pre>
 </details>
 
+<section id="txTest" class="tx-test">
+  <h2>Devnet-Transaktionstest</h2>
+  <p class="warn">Separater Test, <b>kein Live-Trade</b>. Nur <b>Solana Devnet</b>, nur wertloses Test-SOL. Es wird eine minimale <b>Selbstüberweisung</b> von <b>1000 Lamports</b> (0.000001 SOL) von deiner bestätigten Adresse an dieselbe Adresse vorbereitet, plus Memo <code>HyperGrok DEVNET TEST</code>. Kein Dritter erhält SOL; die Nettoänderung ist typischerweise nur die Netzwerkgebühr. Phantom <b>signiert nur</b> (offizielles <code>signTransaction</code>-Deeplink; <code>signAndSendTransaction</code> ist veraltet und wird nicht verwendet). Gesendet wird erst nach einem zweiten, ausdrücklichen Tipp und einer Bestätigungs-Checkbox, und nur an <code>https://api.devnet.solana.com</code>. Seed oder privaten Schlüssel niemals eingeben.</p>
+  <p>Erwartete Signer-Adresse (aus dem bestandenen signMessage-Test): <code id="expectedOwner">3gdr5XAjSswQekThSGBSZuGXxAkwo4Lc8c1Bim44EjXR</code></p>
+  <p>Aktueller Devnet-Kontostand: <b id="txBalance">noch nicht gelesen</b></p>
+  <p id="txFaucet" class="warn" hidden>Der offizielle RPC-Airdrop (<code>requestAirdrop</code> auf api.devnet.solana.com) ist geschlossen (HTTP 410). Hole Test-SOL selbst auf <a href="https://faucet.solana.com" id="faucetLink">https://faucet.solana.com</a>: Devnet wählen, Adresse einfügen, Betrag bestätigen. Höchstens 2 Anfragen alle 8 Stunden. GitHub-Anmeldung schaltet ein höheres Limit frei (von uns nicht getestet; die Faucet-Seite sagt, KI-Agenten sollen sie nicht benutzen).</p>
+  <ol id="txSteps" class="steps">
+    <li data-step="prepared">Transaktion vorbereitet und simuliert</li>
+    <li data-step="reviewed">Inhalt geprüft</li>
+    <li data-step="signed">In Phantom signiert (Nachricht unverändert)</li>
+    <li data-step="sent">Auf Devnet gesendet</li>
+    <li data-step="confirmed">Bestätigt und mit Simulation verglichen</li>
+  </ol>
+  <p id="txStatus" class="status">Noch nicht vorbereitet.</p>
+  <p id="txErr" class="err"></p>
+  <button type="button" id="btnTxPrepare">Transaktion vorbereiten und simulieren</button>
+  <div id="txReview" hidden>
+    <h3>Prüfe diese Werte, bevor du signierst</h3>
+    <pre id="txSummary" class="debug-body"></pre>
+    <button type="button" id="btnTxSign" class="btn">In Phantom signieren</button>
+  </div>
+  <div id="txSignedBox" hidden>
+    <h3>Signatur geprüft — noch nicht gesendet</h3>
+    <pre id="txSignedSummary" class="debug-body"></pre>
+    <label class="check"><input type="checkbox" id="txConfirmBox"> Ich bestätige diese konkrete Devnet-Transaktion und will sie jetzt an api.devnet.solana.com senden (kein Mainnet, kein Live-Trade).</label>
+    <button type="button" id="btnTxSend" disabled>Diese Transaktion jetzt auf Devnet senden</button>
+  </div>
+  <div id="txResultBox" hidden>
+    <h3>Devnet-Ergebnis (an den Desk zurückgeben)</h3>
+    <textarea id="txOut" readonly></textarea>
+    <button type="button" id="btnTxCopy" class="secondary">Ergebnis kopieren</button>
+    <p class="ok">Prüfung auf der Box: <code>npm run devnet:verify-tx -- &lt;Signatur&gt;</code> (optional mit der JSON-Datei). Nur Devnet, kein Senden.</p>
+  </div>
+</section>
+
 <script src="vendor/nacl-fast.min.js"></script>
 <script src="phantom-deeplink.js"></script>
+<script src="solana-tx.js"></script>
 <script src="approval-app.js"></script>
+<script src="tx-app.js"></script>
 </body>
 </html>
