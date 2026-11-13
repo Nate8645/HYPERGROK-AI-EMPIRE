@@ -445,6 +445,9 @@
     function handleCallback() {
       const q = collectCallbackParams();
       renderDebug({ step: "callback" });
+      const state = loadState();
+      const step = q.get("step") || "";
+      if (step.startsWith("tx-") || state?.pendingTx) return "ignored"; // Devnet transaction test owns this callback
       if (q.get("errorCode") || q.get("errorMessage")) {
         const text = formatPhantomError(q.get("errorCode") || "", q.get("errorMessage") || "");
         fail(text, "phantom_" + (q.get("errorCode") || "unknown"));
@@ -452,9 +455,8 @@
         clearQuery();
         return "error";
       }
-      const state = loadState();
-      const isConnectCb = q.get("step") === "connected" || (q.get("phantom_encryption_public_key") && q.get("nonce") && q.get("data"));
-      const isSignCb = q.get("step") === "approved" || (q.get("nonce") && q.get("data") && !q.get("phantom_encryption_public_key") && (state?.session || state?.step === "sign_requested"));
+      const isConnectCb = step === "connected" || (step !== "approved" && !step && q.get("phantom_encryption_public_key") && q.get("nonce") && q.get("data"));
+      const isSignCb = step === "approved";
       if (isConnectCb) {
         if (!state?.secret) {
           fail("Sitzungsschlüssel fehlt – die Seite wurde in einem neuen Tab geöffnet und der lokale Testzustand ist nicht vorhanden oder abgelaufen. Tippe «Neu starten» und verbinde erneut.", "missing_session_key");
@@ -529,6 +531,7 @@
         return "done";
       }
       // No callback: restore visible state if a pending connect/sign lives in localStorage (e.g. original tab).
+      if (state && state.pendingTx) return "ignored";
       if (state && state.step === "connected" && state.secret && state.session) {
         if (isExpired(state, STEP_TTL_MS)) {
           fail("Zeitüberschreitung: der Verbindungs-Schritt ist älter als 5 Minuten. Tippe «Neu starten».", "expired_step");

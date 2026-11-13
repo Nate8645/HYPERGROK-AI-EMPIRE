@@ -173,6 +173,23 @@
         if (!d.signature || b58decode(d.signature).length !== 64) throw new Error("signMessage response lacks a 64-byte signature");
         return { signature: d.signature };
       },
+      // Official: https://docs.phantom.com/phantom-deeplinks/provider-methods/signtransaction
+      // signAndSendTransaction is deprecated; we never build that deeplink. Phantom does not broadcast.
+      signTransactionUrl({ dappEncryptionPublicKeyB58, shared, session, transactionBytes, redirectLink }) {
+        const { nonce, payload } = api.encryptPayload({ transaction: b58encode(transactionBytes), session }, shared);
+        const q = new URLSearchParams({ dapp_encryption_public_key: dappEncryptionPublicKeyB58, nonce, redirect_link: redirectLink, payload });
+        return `${base}/signTransaction?${q}`;
+      },
+      parseSignTransactionResponse(params, shared) {
+        const p = params instanceof URLSearchParams ? params : new URLSearchParams(params);
+        if (p.get("errorCode") || p.get("errorMessage")) throw phantomQueryError(p);
+        for (const k of ["nonce", "data"]) if (!p.get(k)) throw new Error(`signTransaction response missing ${k}`);
+        const d = api.decryptPayload(p.get("data"), p.get("nonce"), shared);
+        if (!d.transaction) throw new Error("signTransaction response lacks transaction");
+        const bytes = b58decode(d.transaction);
+        if (bytes.length < 100) throw new Error("signTransaction response transaction is too short");
+        return { transactionB58: d.transaction, transactionBytes: bytes };
+      },
     };
     return api;
   }
